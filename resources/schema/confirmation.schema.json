@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agents-full-duplex.dev/schemas/realtime-agent-confirmation@1",
+  "title": "Realtime Agent Confirmation v1",
+  "type": "object",
+  "required": ["id", "call", "requested_at"],
+  "properties": {
+    "id": { "type": "string" },
+    "call": { "$ref": "tool-call.schema.json" },
+    "requested_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

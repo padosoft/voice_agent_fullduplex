@@ -14,7 +14,7 @@ export class DomSurfaceAdapter {
   ) {}
 
   register(id: string, title: string | null = null): () => void {
-    return this.registry.register({
+    const unregister = this.registry.register({
       id,
       snapshot: () => ({
         title,
@@ -29,6 +29,21 @@ export class DomSurfaceAdapter {
         },
       },
     });
+    const notify = () => this.registry.notify(id);
+    const ownerDocument = "ownerDocument" in this.root ? this.root.ownerDocument : null;
+    const document = ownerDocument ?? this.root as Document;
+    const view = document?.defaultView;
+    const observer = view ? new view.MutationObserver(notify) : null;
+    observer?.observe(this.root, { subtree: true, childList: true, attributes: true, characterData: true });
+    this.root.addEventListener("input", notify);
+    this.root.addEventListener("change", notify);
+
+    return () => {
+      observer?.disconnect();
+      this.root.removeEventListener("input", notify);
+      this.root.removeEventListener("change", notify);
+      unregister();
+    };
   }
 
   private components(): Record<string, SurfaceComponent> {

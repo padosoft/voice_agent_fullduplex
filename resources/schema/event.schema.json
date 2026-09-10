@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agents-full-duplex.dev/schemas/realtime-agent-event@1",
+  "title": "Realtime Agent Event v1",
+  "type": "object",
+  "required": ["v", "id", "session_id", "seq", "type", "source", "payload", "state_revision", "timestamp"],
+  "properties": {
+    "v": { "const": 1 },
+    "id": { "type": "string" },
+    "session_id": { "type": "string" },
+    "seq": { "type": "integer", "minimum": 1 },
+    "type": { "type": "string" },
+    "source": { "enum": ["application", "agent", "client", "engine", "provider", "user"] },
+    "payload": { "type": "object" },
+    "state_revision": { "type": "integer", "minimum": 1 },
+    "provider_event_id": { "type": ["string", "null"] },
+    "timestamp": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

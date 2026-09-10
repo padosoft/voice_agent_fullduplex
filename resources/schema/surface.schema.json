@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agents-full-duplex.dev/schemas/realtime-agent-surface@1",
+  "title": "Realtime Agent Surface v1",
+  "type": "object",
+  "required": ["surface", "components"],
+  "properties": {
+    "surface": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$" },
+    "revision": { "type": "integer", "minimum": 0 },
+    "title": { "type": ["string", "null"] },
+    "components": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["type", "label", "state", "actions"],
+        "properties": {
+          "type": { "type": "string" },
+          "label": { "type": "string" },
+          "state": { "type": "object" },
+          "actions": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

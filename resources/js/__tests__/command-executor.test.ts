@@ -15,6 +15,7 @@ function command(overrides: Partial<UiCommand> = {}): UiCommand {
     arguments: {},
     expires_at: "2026-09-10T12:01:00.000Z",
     nonce: "nonce_1",
+    token: "a".repeat(64),
     ...overrides,
   };
 }

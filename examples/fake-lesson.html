@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Realtime Agent Fake Lesson</title>
+  </head>
+  <body data-status="starting">
+    <ol>
+      <li data-goal="topic_1" data-completed="false">Photosynthesis</li>
+      <li data-goal="topic_2" data-completed="false">Light-dependent phase</li>
+      <li data-goal="topic_3" data-completed="false">Calvin cycle</li>
+    </ol>
+    <output id="tool-results">0</output>
+    <script type="module">
+      import { FakeRealtimeDriver, RealtimeAgentClient, SurfaceRegistry } from "../dist/client.js";
+
+      const goals = ["topic_1", "topic_2", "topic_3"];
+      const state = {
+        schema: "realtime-agent-state@1",
+        session: { id: "fake_session", revision: 1, status: "active" },
+        pending: { actions: [], confirmations: [] },
+      };
+      const control = {
+        async executeTool(call) {
+          state.session.revision += 1;
+
+          if (call.name === "goal.update" && call.arguments.goal_id === "topic_3") {
+            state.session.status = "completed";
+          }
+
+          if (call.name === "ui.action") {
+            return {
+              call_id: call.id,
+              status: "completed",
+              output: {
+                command: {
+                  id: `cmd_${call.id}`,
+                  session_id: state.session.id,
+                  call_id: call.id,
+                  base_revision: state.session.revision,
+                  surface: "lesson.show",
+                  action: "complete",
+                  target: call.arguments.target,
+                  arguments: {},
+                  expires_at: new Date(Date.now() + 60_000).toISOString(),
+                  nonce: `nonce_${call.id}`,
+                  token: "a".repeat(64),
+                },
+              },
+              state_revision: state.session.revision,
+            };
+          }
+
+          return {
+            call_id: call.id,
+            status: "completed",
+            output: { goal: call.arguments.goal_id },
+            state_revision: state.session.revision,
+          };
+        },
+        async refreshState() { return state; },
+        async syncSurface() { state.session.revision += 1; return state; },
+        async resolveConfirmation() { throw new Error("No confirmation expected."); },
+        async completeUiCommand() { state.session.revision += 1; return state; },
+        async finish() { state.session.status = "completed"; state.session.revision += 1; return state; },
+      };
+      const surfaces = new SurfaceRegistry();
+      surfaces.register({
+        id: "lesson.show",
+        snapshot: () => ({
+          title: "Photosynthesis lesson",
+          components: Object.fromEntries(goals.map((goal) => [goal, {
+            type: "goal",
+            label: goal,
+            state: { completed: document.querySelector(`[data-goal='${goal}']`).dataset.completed === "true" },
+            actions: ["complete"],
+          }])),
+        }),
+        actions: {
+          complete: ({ target }) => {
+            document.querySelector(`[data-goal='${target}']`).dataset.completed = "true";
+          },
+        },
+      });
+      const provider = new FakeRealtimeDriver();
+      const client = new RealtimeAgentClient(surfaces, provider, control, { surfaceDebounceMs: 0 });
+      await client.connect({
+        session_id: state.session.id,
+        provider: "fake",
+        connection: { transport: "fake" },
+        state,
+      });
+
+      for (const [index, goal] of goals.entries()) {
+        provider.emit({
+          type: "agent.tool.call",
+          call: { id: `goal_${index}`, name: "goal.update", arguments: { goal_id: goal, status: "completed", evidence: "E2E" }, base_revision: state.session.revision },
+        });
+        while (provider.toolResults.length < index * 2 + 1) await new Promise((resolve) => setTimeout(resolve, 0));
+        provider.emit({
+          type: "agent.tool.call",
+          call: { id: `ui_${index}`, name: "ui.action", arguments: { surface: "lesson.show", action: "complete", target: goal }, base_revision: state.session.revision },
+        });
+        while (provider.toolResults.length < index * 2 + 2) await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+
+      document.querySelector("#tool-results").textContent = String(provider.toolResults.length);
+      document.body.dataset.status = (await client.refreshState()).session.status;
+    </script>
+  </body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agents-full-duplex.dev/schemas/realtime-agent-tool-result@1",
+  "title": "Realtime Agent Tool Result v1",
+  "type": "object",
+  "required": ["call_id", "status", "state_revision"],
+  "properties": {
+    "call_id": { "type": "string" },
+    "status": { "enum": ["completed", "failed", "confirmation_required", "awaiting_client", "rejected"] },
+    "output": { "type": ["object", "null"] },
+    "error": { "type": ["object", "null"] },
+    "state_revision": { "type": "integer", "minimum": 1 }
+  },
+  "additionalProperties": false
+}

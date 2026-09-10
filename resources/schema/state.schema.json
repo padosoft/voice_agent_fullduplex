@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agents-full-duplex.dev/schemas/realtime-agent-state@1",
+  "title": "Realtime Agent State v1",
+  "type": "object",
+  "required": ["schema", "session", "environment", "mission", "working_memory", "capabilities", "pending", "application"],
+  "properties": {
+    "schema": { "const": "realtime-agent-state@1" },
+    "session": {
+      "type": "object",
+      "required": ["id", "agent", "provider", "status", "revision", "started_at"],
+      "properties": {
+        "id": { "type": "string" },
+        "agent": { "type": "string" },
+        "provider": { "type": "string" },
+        "status": { "enum": ["active", "completed", "failed", "expired"] },
+        "revision": { "type": "integer", "minimum": 1 },
+        "started_at": { "type": "string", "format": "date-time" },
+        "ended_at": { "type": ["string", "null"], "format": "date-time" }
+      },
+      "additionalProperties": true
+    },
+    "environment": { "type": "object" },
+    "mission": { "type": "object" },
+    "working_memory": { "type": "object" },
+    "capabilities": { "type": "object" },
+    "pending": {
+      "type": "object",
+      "required": ["actions", "confirmations"],
+      "properties": {
+        "actions": { "type": "array", "items": { "$ref": "ui-command.schema.json" } },
+        "confirmations": { "type": "array" }
+      }
+    },
+    "application": { "type": "object" }
+  },
+  "additionalProperties": false
+}

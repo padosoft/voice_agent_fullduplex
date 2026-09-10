@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agents-full-duplex.dev/schemas/realtime-agent-ui-command@1",
+  "title": "Realtime Agent UI Command v1",
+  "type": "object",
+  "required": ["id", "session_id", "call_id", "base_revision", "surface", "action", "target", "arguments", "expires_at", "nonce", "token"],
+  "properties": {
+    "id": { "type": "string" },
+    "session_id": { "type": "string" },
+    "call_id": { "type": "string" },
+    "base_revision": { "type": "integer", "minimum": 1 },
+    "surface": { "type": "string" },
+    "action": { "type": "string" },
+    "target": { "type": "string" },
+    "arguments": { "type": "object" },
+    "expires_at": { "type": "string", "format": "date-time" },
+    "nonce": { "type": "string" },
+    "token": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  },
+  "additionalProperties": false
+}

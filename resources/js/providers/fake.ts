@@ -27,6 +27,11 @@ export class FakeRealtimeDriver implements RealtimeProviderDriver {
     this.events.emit({ type: "agent.disconnected" });
   }
 
+  async sendText(text: string): Promise<void> {
+    this.assertConnected();
+    this.events.emit({ type: "agent.transcript.delta", role: "user", text });
+  }
+
   async sendContext(update: JsonObject): Promise<void> {
     this.assertConnected();
     this.context.push(update);
@@ -44,6 +49,13 @@ export class FakeRealtimeDriver implements RealtimeProviderDriver {
   emit(event: CanonicalProviderEvent): void {
     this.assertConnected();
     this.events.emit(event);
+  }
+
+  async play(events: readonly CanonicalProviderEvent[], delayMs = 0): Promise<void> {
+    for (const event of events) {
+      if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
+      this.emit(event);
+    }
   }
 
   private assertConnected(): void {

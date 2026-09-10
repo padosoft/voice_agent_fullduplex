@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agents-full-duplex.dev/schemas/realtime-agent-goal@1",
+  "title": "Realtime Agent Goal v1",
+  "type": "object",
+  "required": ["id", "label", "status", "required", "source", "completion"],
+  "properties": {
+    "id": { "type": "string" },
+    "label": { "type": "string" },
+    "description": { "type": ["string", "null"] },
+    "status": { "enum": ["pending", "active", "completed", "failed", "skipped", "cancelled"] },
+    "required": { "type": "boolean" },
+    "source": { "enum": ["application", "agent", "user"] },
+    "completion": {
+      "type": "object",
+      "required": ["mode", "requires_evidence"],
+      "properties": {
+        "mode": { "type": "string" },
+        "requires_evidence": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "evidence": { "type": ["string", "null"] },
+    "created_at": { "type": ["string", "null"] },
+    "completed_at": { "type": ["string", "null"] }
+  },
+  "additionalProperties": false
+}

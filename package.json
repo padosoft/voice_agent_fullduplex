@@ -10,15 +10,22 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "resources/schema"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "test": "vitest run",
+    "test": "vitest run resources/js",
+    "test:e2e": "playwright test",
     "demo": "tsx examples/browser-demo.ts",
-    "check": "npm run build && npm test"
+    "schema:check": "node scripts/check-schema-sync.mjs",
+    "check": "npm run build && npm run schema:check && npm test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "jsdom": "^26.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.8.0",

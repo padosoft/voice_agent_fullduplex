@@ -3,11 +3,13 @@ import type {
   SurfaceDefinition,
   SurfaceSnapshot,
 } from "../types.js";
+import { EventStream } from "../events.js";
 
 export class SurfaceRegistry {
   private readonly surfaces = new Map<string, SurfaceDefinition>();
   private activeSurface: string | null = null;
   private revision = 0;
+  private readonly changes = new EventStream<string>();
 
   register(definition: SurfaceDefinition): () => void {
     if (this.surfaces.has(definition.id)) {
@@ -16,6 +18,7 @@ export class SurfaceRegistry {
 
     this.surfaces.set(definition.id, definition);
     this.activeSurface = definition.id;
+    this.notify(definition.id);
 
     return () => {
       this.surfaces.delete(definition.id);
@@ -24,6 +27,14 @@ export class SurfaceRegistry {
         this.activeSurface = null;
       }
     };
+  }
+
+  onChange(listener: (surface: string) => void): () => void {
+    return this.changes.on(listener);
+  }
+
+  notify(id = this.activeSurface): void {
+    if (id !== null && this.surfaces.has(id)) this.changes.emit(id);
   }
 
   has(id: string): boolean {

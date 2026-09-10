@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agents-full-duplex.dev/schemas/realtime-agent-connection@1",
+  "title": "Realtime Agent Client Connection v1",
+  "type": "object",
+  "required": ["session_id", "provider", "connection", "state"],
+  "properties": {
+    "session_id": { "type": "string" },
+    "provider": { "enum": ["fake", "openai", "elevenlabs"] },
+    "connection": { "type": "object" },
+    "state": { "$ref": "state.schema.json" }
+  },
+  "additionalProperties": false
+}

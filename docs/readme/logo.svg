@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title desc">
+  <title id="title">Laravel Realtime Agent logo</title>
+  <desc id="desc">A red application hexagon surrounding a blue realtime state pulse.</desc>
+  <defs>
+    <linearGradient id="red" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff5a5f"/>
+      <stop offset="1" stop-color="#e11d48"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#0ea5e9"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+  </defs>
+  <path d="M80 8 139 42v68l-59 34-59-34V42Z" fill="none" stroke="url(#red)" stroke-width="12" stroke-linejoin="round"/>
+  <circle cx="80" cy="80" r="30" fill="none" stroke="url(#blue)" stroke-width="10"/>
+  <path d="M38 80h21l10-19 17 39 10-20h26" fill="none" stroke="url(#blue)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

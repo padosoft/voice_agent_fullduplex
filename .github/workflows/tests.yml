@@ -1,0 +1,55 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  php:
+    name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }} / ${{ matrix.stability }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php: '8.2'
+            laravel: '12'
+            testbench: '^10'
+            stability: lowest
+          - php: '8.4'
+            laravel: '12'
+            testbench: '^10'
+            stability: stable
+          - php: '8.3'
+            laravel: '13'
+            testbench: '^11'
+            stability: lowest
+          - php: '8.4'
+            laravel: '13'
+            testbench: '^11'
+            stability: stable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - run: composer require --dev --no-update orchestra/testbench:${{ matrix.testbench }}
+      - if: matrix.stability == 'lowest'
+        run: composer update --prefer-lowest --prefer-stable --no-interaction --no-progress
+      - if: matrix.stability == 'stable'
+        run: composer update --prefer-stable --no-interaction --no-progress
+      - run: composer check
+
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run check
+      - run: npm run test:e2e

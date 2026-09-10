@@ -1,0 +1,15 @@
+providers:
+  - Workbench\App\Providers\WorkbenchServiceProvider
+
+workbench:
+  start: /
+  install: false
+  health: true
+  discovers:
+    web: true
+    api: false
+    commands: true
+    components: false
+    views: false
+  build:
+    - asset-publish

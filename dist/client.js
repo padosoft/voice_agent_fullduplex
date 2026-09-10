@@ -15,6 +15,8 @@ export class RealtimeAgentClient {
     executor = null;
     surfaceTimer = null;
     lastSurface;
+    providerName = null;
+    interactionMode = "voice";
     constructor(surfaces, provider, control, options = {}) {
         this.surfaces = surfaces;
         this.provider = provider;
@@ -24,12 +26,16 @@ export class RealtimeAgentClient {
     }
     async connect(descriptor) {
         this.sessionId = descriptor.session_id;
+        this.providerName = descriptor.provider;
         this.state = descriptor.state;
         this.executor = new UiCommandExecutor(descriptor.session_id, this.surfaces);
         this.unsubscribeProvider = this.provider.on((event) => {
             this.events.emit(event);
             if (event.type === "agent.tool.call")
                 void this.handleToolCall(event.call);
+            if (event.type === "agent.transcript.final" || event.type === "agent.usage") {
+                void this.persistProviderEvent(event);
+            }
         });
         this.unsubscribeSurface = this.surfaces.onChange(() => this.scheduleSurfaceSync());
         await this.provider.connect(descriptor);
@@ -37,17 +43,50 @@ export class RealtimeAgentClient {
             await this.syncSurface();
     }
     async disconnect() {
-        this.unsubscribeProvider?.();
-        this.unsubscribeSurface?.();
-        this.unsubscribeProvider = null;
-        this.unsubscribeSurface = null;
         if (this.surfaceTimer)
             clearTimeout(this.surfaceTimer);
         this.surfaceTimer = null;
         await this.provider.disconnect();
+        this.unsubscribeProvider?.();
+        this.unsubscribeSurface?.();
+        this.unsubscribeProvider = null;
+        this.unsubscribeSurface = null;
     }
     async sendText(text) {
-        await this.provider.sendText(text);
+        const content = text.trim();
+        if (!content)
+            throw new Error("A text message cannot be empty.");
+        const messageId = `client_${this.uniqueId()}`;
+        await this.control.recordMessage({
+            provider: this.providerId(),
+            provider_event_id: messageId,
+            idempotency_key: messageId,
+            role: "user",
+            direction: "input",
+            modality: "text",
+            status: "completed",
+            content,
+            metadata: { interaction_mode: this.interactionMode },
+        });
+        this.events.emit({
+            type: "agent.transcript.final",
+            role: "user",
+            text: content,
+            messageId,
+            modality: "text",
+        });
+        await this.provider.sendText(content);
+    }
+    async switchToText() {
+        this.interactionMode = "text";
+        await this.provider.setMode("text");
+    }
+    async switchToVoice() {
+        this.interactionMode = "voice";
+        await this.provider.setMode("voice");
+    }
+    async audit() {
+        return this.control.fetchAudit();
     }
     async refreshState() {
         return this.setState(await this.control.refreshState());
@@ -74,6 +113,35 @@ export class RealtimeAgentClient {
         }
         catch (error) {
             this.events.emit({ type: "agent.error", error: error instanceof Error ? error : new Error("Tool execution failed.") });
+        }
+    }
+    async persistProviderEvent(event) {
+        try {
+            if (event.type === "agent.usage") {
+                await this.control.recordUsage(event.usage);
+                return;
+            }
+            if (event.type === "agent.transcript.final") {
+                if (!event.text.trim())
+                    return;
+                await this.control.recordMessage({
+                    provider: this.providerId(),
+                    provider_event_id: event.messageId,
+                    idempotency_key: event.messageId,
+                    role: event.role === "agent" ? "assistant" : "user",
+                    direction: event.role === "agent" ? "output" : "input",
+                    modality: event.modality,
+                    status: event.status ?? "completed",
+                    content: event.text,
+                    metadata: { interaction_mode: this.interactionMode },
+                });
+            }
+        }
+        catch (error) {
+            this.events.emit({
+                type: "agent.error",
+                error: error instanceof Error ? error : new Error("Provider audit event could not be persisted."),
+            });
         }
     }
     async executeUiCommand(result) {
@@ -119,6 +187,14 @@ export class RealtimeAgentClient {
         if (!this.state)
             throw new Error("Realtime Agent client is not connected.");
         return Number(this.state.session.revision);
+    }
+    providerId() {
+        if (!this.providerName)
+            throw new Error("Realtime Agent client is not connected.");
+        return this.providerName;
+    }
+    uniqueId() {
+        return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}_${Math.random().toString(16).slice(2)}`;
     }
     setRevision(revision) {
         if (this.state)

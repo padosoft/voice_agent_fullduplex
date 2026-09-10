@@ -9,6 +9,8 @@ use AgentsFullDuplex\RealtimeAgent\Data\ToolCall;
 use AgentsFullDuplex\RealtimeAgent\Data\ToolResult;
 use AgentsFullDuplex\RealtimeAgent\Engine\AgentSessionManager;
 use AgentsFullDuplex\RealtimeAgent\Engine\ConfirmationEngine;
+use AgentsFullDuplex\RealtimeAgent\Engine\SessionAuditManager;
+use AgentsFullDuplex\RealtimeAgent\Engine\SessionAuditReconciler;
 use AgentsFullDuplex\RealtimeAgent\Engine\StateEngine;
 use AgentsFullDuplex\RealtimeAgent\Engine\SurfacePatchApplier;
 use AgentsFullDuplex\RealtimeAgent\Exceptions\ExpiredUiCommand;
@@ -36,6 +38,8 @@ final readonly class RealtimeAgentController
         private SessionAuthorizer $authorizer,
         private PayloadGuard $payloads,
         private SurfacePatchApplier $surfacePatches,
+        private SessionAuditManager $audits,
+        private SessionAuditReconciler $auditReconciler,
     ) {}
 
     public function state(Request $request, string $session): JsonResponse
@@ -54,11 +58,72 @@ final readonly class RealtimeAgentController
                 ? $request->getContent()
                 : null;
 
-            return $this->providers
+            $descriptor = $this->providers
                 ->driver($agent->definition->provider)
-                ->connect($agent, $offer)
-                ->jsonSerialize();
+                ->connect($agent, $offer);
+            $providerSessionId = $descriptor->connection['conversation_id'] ?? null;
+
+            if (is_string($providerSessionId) && $providerSessionId !== '') {
+                $agent->setProviderSessionId($providerSessionId);
+            }
+
+            return $descriptor->jsonSerialize();
         });
+    }
+
+    public function audit(Request $request, string $session): JsonResponse
+    {
+        return $this->run($request, $session, fn (AgentSession $agent): array => [
+            'audit' => $this->audits->forSession($agent)->jsonSerialize(),
+        ]);
+    }
+
+    public function reconcileAudit(Request $request, string $session): JsonResponse
+    {
+        return $this->run($request, $session, fn (AgentSession $agent): array => [
+            'audit' => $this->auditReconciler->reconcile($agent)->jsonSerialize(),
+        ]);
+    }
+
+    public function message(Request $request, string $session): JsonResponse
+    {
+        $this->payloads->enforceSize($request->getContent());
+        $validated = $request->validate([
+            'provider' => ['required', 'string', 'max:64'],
+            'provider_event_id' => ['nullable', 'string', 'max:255'],
+            'idempotency_key' => ['required', 'string', 'max:255'],
+            'role' => ['required', 'in:user,assistant,system,tool'],
+            'direction' => ['required', 'in:input,output,internal'],
+            'modality' => ['required', 'in:text,audio,tool'],
+            'status' => ['sometimes', 'in:completed,corrected,interrupted'],
+            'content' => ['required', 'string', 'max:'.config('realtime-agent.audit.max_message_characters', 65_535)],
+            'metadata' => ['sometimes', 'array'],
+            'occurred_at' => ['nullable', 'date'],
+        ]);
+
+        return $this->run($request, $session, fn (AgentSession $agent): array => [
+            'message' => $this->audits->recordMessage($agent, $validated)->jsonSerialize(),
+        ]);
+    }
+
+    public function usage(Request $request, string $session): JsonResponse
+    {
+        $this->payloads->enforceSize($request->getContent());
+        $validated = $request->validate([
+            'provider' => ['required', 'string', 'max:64'],
+            'provider_event_id' => ['nullable', 'string', 'max:255'],
+            'idempotency_key' => ['required', 'string', 'max:255'],
+            'kind' => ['required', 'in:response,transcription,duration,conversation'],
+            'model' => ['nullable', 'string', 'max:128'],
+            'units' => ['required', 'array', 'min:1', 'max:12'],
+            'units.*' => ['numeric', 'min:0'],
+            'raw' => ['sometimes', 'array'],
+            'occurred_at' => ['nullable', 'date'],
+        ]);
+
+        return $this->run($request, $session, fn (AgentSession $agent): array => [
+            'usage' => $this->audits->recordUsage($agent, $validated)->jsonSerialize(),
+        ]);
     }
 
     public function surface(Request $request, string $session): JsonResponse
@@ -210,6 +275,8 @@ final readonly class RealtimeAgentController
                 : Response::HTTP_UNPROCESSABLE_ENTITY;
 
             return $this->error($exception->getMessage(), $status, 'tool_rejected');
+        } catch (\InvalidArgumentException $exception) {
+            return $this->error($exception->getMessage(), Response::HTTP_UNPROCESSABLE_ENTITY, 'invalid_audit_payload');
         } catch (ValidationException $exception) {
             throw $exception;
         } catch (Throwable $exception) {

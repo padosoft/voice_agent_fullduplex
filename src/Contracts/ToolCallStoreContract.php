@@ -10,6 +10,9 @@ use Throwable;
 
 interface ToolCallStoreContract
 {
+    /** @return list<array<string, mixed>> */
+    public function allForSession(string $sessionId): array;
+
     public function completed(string $sessionId, string $idempotencyKey): ?ToolResult;
 
     /** Return false when another execution already owns this idempotency key. */

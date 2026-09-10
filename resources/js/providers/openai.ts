@@ -3,9 +3,34 @@ import type {
   CanonicalProviderEvent,
   ConnectionDescriptor,
   JsonObject,
+  InteractionMode,
   RealtimeProviderDriver,
   ToolResult,
 } from "../types.js";
+
+export function normalizeOpenAIResponseUsage(usage: JsonObject): Record<string, number> {
+  const object = (value: unknown): JsonObject => value !== null && typeof value === "object" ? value as JsonObject : {};
+  const input = object(usage.input_token_details ?? usage.input_tokens_details);
+  const output = object(usage.output_token_details ?? usage.output_tokens_details);
+  const cached = object(input.cached_tokens_details);
+
+  return {
+    input_text_tokens: Number(input.text_tokens ?? 0),
+    cached_input_text_tokens: Number(cached.text_tokens ?? 0),
+    input_audio_tokens: Number(input.audio_tokens ?? 0),
+    cached_input_audio_tokens: Number(cached.audio_tokens ?? 0),
+    input_image_tokens: Number(input.image_tokens ?? 0),
+    cached_input_image_tokens: Number(cached.image_tokens ?? 0),
+    output_text_tokens: Number(output.text_tokens ?? 0),
+    output_audio_tokens: Number(output.audio_tokens ?? 0),
+  };
+}
+
+export function openAIResponseCreateEvent(mode: InteractionMode): JsonObject {
+  return mode === "text"
+    ? { type: "response.create", response: { output_modalities: ["text"] } }
+    : { type: "response.create" };
+}
 
 export class OpenAIRealtimeDriver implements RealtimeProviderDriver {
   private readonly events = new EventStream<CanonicalProviderEvent>();
@@ -16,6 +41,10 @@ export class OpenAIRealtimeDriver implements RealtimeProviderDriver {
   private revision = 1;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private toolNameMap: Record<string, string> = {};
+  private mode: InteractionMode = "voice";
+  private model = "gpt-realtime";
+  private transcriptionModel = "gpt-4o-mini-transcribe";
+  private readonly audioElements: HTMLAudioElement[] = [];
 
   constructor(
     private readonly request: typeof fetch = globalThis.fetch.bind(globalThis),
@@ -31,6 +60,8 @@ export class OpenAIRealtimeDriver implements RealtimeProviderDriver {
     this.descriptor = descriptor;
     this.revision = Number(descriptor.state.session.revision);
     this.toolNameMap = (descriptor.connection.tool_name_map ?? {}) as Record<string, string>;
+    this.model = String(descriptor.connection.model ?? this.model);
+    this.transcriptionModel = String(descriptor.connection.transcription_model ?? this.transcriptionModel);
     await this.negotiate(descriptor);
     const reconnectMs = Number(descriptor.connection.renegotiate_after_ms ?? 55 * 60 * 1000);
     this.reconnectTimer = setTimeout(() => void this.reconnect(), reconnectMs);
@@ -45,7 +76,19 @@ export class OpenAIRealtimeDriver implements RealtimeProviderDriver {
     this.channel = null;
     this.connection = null;
     this.stream = null;
+    this.audioElements.splice(0).forEach((audio) => audio.remove());
     this.events.emit({ type: "agent.disconnected" });
+  }
+
+  async setMode(mode: InteractionMode): Promise<void> {
+    this.mode = mode;
+    this.stream?.getAudioTracks().forEach((track) => {
+      track.enabled = mode === "voice";
+    });
+    this.audioElements.forEach((audio) => {
+      audio.muted = mode === "text";
+    });
+    this.events.emit({ type: "agent.mode.changed", mode });
   }
 
   async sendText(text: string): Promise<void> {
@@ -53,7 +96,7 @@ export class OpenAIRealtimeDriver implements RealtimeProviderDriver {
       type: "conversation.item.create",
       item: { type: "message", role: "user", content: [{ type: "input_text", text }] },
     });
-    this.send({ type: "response.create" });
+    this.send(this.responseCreateEvent());
   }
 
   async sendContext(update: JsonObject): Promise<void> {
@@ -76,7 +119,7 @@ export class OpenAIRealtimeDriver implements RealtimeProviderDriver {
         output: JSON.stringify(result),
       },
     });
-    this.send({ type: "response.create" });
+    this.send(this.responseCreateEvent());
   }
 
   on(listener: (event: CanonicalProviderEvent) => void): () => void {
@@ -110,16 +153,21 @@ export class OpenAIRealtimeDriver implements RealtimeProviderDriver {
 
     if (this.mediaDevices) {
       this.stream = await this.mediaDevices.getUserMedia({ audio: true });
-      this.stream.getTracks().forEach((track) => peer.addTrack(track, this.stream!));
+      this.stream.getTracks().forEach((track) => {
+        track.enabled = this.mode === "voice";
+        peer.addTrack(track, this.stream!);
+      });
     }
 
     peer.addEventListener("track", (event) => {
       if (!globalThis.document) return;
       const audio = document.createElement("audio");
       audio.autoplay = true;
+      audio.muted = this.mode === "text";
       audio.srcObject = event.streams[0] ?? new MediaStream([event.track]);
       audio.hidden = true;
       document.body.append(audio);
+      this.audioElements.push(audio);
     });
 
     const offer = await peer.createOffer();
@@ -157,10 +205,66 @@ export class OpenAIRealtimeDriver implements RealtimeProviderDriver {
             base_revision: this.revision,
           },
         });
-      } else if (type === "response.audio_transcript.delta" || type === "response.output_audio_transcript.delta") {
-        this.events.emit({ type: "agent.transcript.delta", role: "agent", text: String(event.delta ?? "") });
+      } else if (type === "response.audio_transcript.delta" || type === "response.output_audio_transcript.delta" || type === "response.output_text.delta") {
+        this.events.emit({
+          type: "agent.transcript.delta",
+          role: "agent",
+          text: String(event.delta ?? ""),
+          messageId: String(event.item_id ?? event.response_id ?? ""),
+          modality: type === "response.output_text.delta" ? "text" : "audio",
+        });
+      } else if (type === "response.audio_transcript.done" || type === "response.output_audio_transcript.done" || type === "response.output_text.done") {
+        this.events.emit({
+          type: "agent.transcript.final",
+          role: "agent",
+          text: String(event.transcript ?? event.text ?? ""),
+          messageId: String(event.item_id ?? event.response_id ?? event.event_id),
+          modality: type === "response.output_text.done" ? "text" : "audio",
+        });
       } else if (type === "conversation.item.input_audio_transcription.completed") {
-        this.events.emit({ type: "agent.transcript.delta", role: "user", text: String(event.transcript ?? "") });
+        const messageId = String(event.item_id ?? event.event_id);
+        this.events.emit({
+          type: "agent.transcript.final",
+          role: "user",
+          text: String(event.transcript ?? ""),
+          messageId,
+          modality: "audio",
+        });
+        const usage = this.asObject(event.usage);
+        if (Object.keys(usage).length === 0) return;
+        const input = this.asObject(usage.input_token_details ?? usage.input_tokens_details);
+        this.events.emit({
+          type: "agent.usage",
+          usage: {
+            provider: "openai",
+            provider_event_id: String(event.event_id ?? `${messageId}:transcription`),
+            idempotency_key: String(event.event_id ?? `${messageId}:transcription`),
+            kind: "transcription",
+            model: this.transcriptionModel,
+            units: {
+              input_audio_tokens: Number(input.audio_tokens ?? usage.input_tokens ?? 0),
+              output_text_tokens: Number(usage.output_tokens ?? 0),
+            },
+            raw: usage,
+          },
+        });
+      } else if (type === "response.done") {
+        const response = this.asObject(event.response);
+        const usage = this.asObject(response.usage);
+        if (Object.keys(usage).length === 0) return;
+        const eventId = String(event.event_id ?? response.id ?? `usage_${Date.now()}`);
+        this.events.emit({
+          type: "agent.usage",
+          usage: {
+            provider: "openai",
+            provider_event_id: eventId,
+            idempotency_key: eventId,
+            kind: "response",
+            model: String(response.model ?? this.model),
+            units: normalizeOpenAIResponseUsage(usage),
+            raw: usage,
+          },
+        });
       } else if (type === "error") {
         const detail = event.error as JsonObject | undefined;
         this.events.emit({ type: "agent.error", error: new Error(String(detail?.message ?? "OpenAI Realtime error.")) });
@@ -178,6 +282,10 @@ export class OpenAIRealtimeDriver implements RealtimeProviderDriver {
     this.channel.send(JSON.stringify(event));
   }
 
+  private responseCreateEvent(): JsonObject {
+    return openAIResponseCreateEvent(this.mode);
+  }
+
   private async reconnect(): Promise<void> {
     if (!this.descriptor) return;
     const descriptor = this.descriptor;
@@ -187,5 +295,9 @@ export class OpenAIRealtimeDriver implements RealtimeProviderDriver {
 
   private csrfToken(): string {
     return globalThis.document?.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? "";
+  }
+
+  private asObject(value: unknown): JsonObject {
+    return value !== null && typeof value === "object" ? value as JsonObject : {};
   }
 }

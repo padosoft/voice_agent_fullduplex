@@ -6,20 +6,29 @@ namespace AgentsFullDuplex\RealtimeAgent;
 
 use AgentsFullDuplex\RealtimeAgent\Console\DoctorCommand;
 use AgentsFullDuplex\RealtimeAgent\Console\InstallCommand;
+use AgentsFullDuplex\RealtimeAgent\Contracts\ConversationStoreContract;
 use AgentsFullDuplex\RealtimeAgent\Contracts\EventStoreContract;
 use AgentsFullDuplex\RealtimeAgent\Contracts\StateStoreContract;
 use AgentsFullDuplex\RealtimeAgent\Contracts\ToolBrokerContract;
 use AgentsFullDuplex\RealtimeAgent\Contracts\ToolCallStoreContract;
+use AgentsFullDuplex\RealtimeAgent\Contracts\UsageStoreContract;
 use AgentsFullDuplex\RealtimeAgent\Engine\AgentSessionManager;
 use AgentsFullDuplex\RealtimeAgent\Engine\ConfirmationEngine;
+use AgentsFullDuplex\RealtimeAgent\Engine\SessionAuditManager;
+use AgentsFullDuplex\RealtimeAgent\Engine\SessionAuditReconciler;
 use AgentsFullDuplex\RealtimeAgent\Engine\ToolBroker;
 use AgentsFullDuplex\RealtimeAgent\Engine\UiCommandSigner;
+use AgentsFullDuplex\RealtimeAgent\Engine\UsageCostCalculator;
+use AgentsFullDuplex\RealtimeAgent\State\ArrayConversationStore;
 use AgentsFullDuplex\RealtimeAgent\State\ArrayEventStore;
 use AgentsFullDuplex\RealtimeAgent\State\ArrayStateStore;
 use AgentsFullDuplex\RealtimeAgent\State\ArrayToolCallStore;
+use AgentsFullDuplex\RealtimeAgent\State\ArrayUsageStore;
+use AgentsFullDuplex\RealtimeAgent\State\DatabaseConversationStore;
 use AgentsFullDuplex\RealtimeAgent\State\DatabaseEventStore;
 use AgentsFullDuplex\RealtimeAgent\State\DatabaseStateStore;
 use AgentsFullDuplex\RealtimeAgent\State\DatabaseToolCallStore;
+use AgentsFullDuplex\RealtimeAgent\State\DatabaseUsageStore;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 
@@ -56,9 +65,28 @@ final class RealtimeAgentServiceProvider extends ServiceProvider
             return new DatabaseToolCallStore($app['config'], $app['db']->connection());
         });
 
+        $this->app->singleton(ConversationStoreContract::class, function ($app): ConversationStoreContract {
+            if ($app['config']->get('realtime-agent.state.driver') === 'array') {
+                return $app->make(ArrayConversationStore::class);
+            }
+
+            return new DatabaseConversationStore($app['db']->connection());
+        });
+
+        $this->app->singleton(UsageStoreContract::class, function ($app): UsageStoreContract {
+            if ($app['config']->get('realtime-agent.state.driver') === 'array') {
+                return $app->make(ArrayUsageStore::class);
+            }
+
+            return new DatabaseUsageStore($app['db']->connection());
+        });
+
         $this->app->singleton(ToolBrokerContract::class, ToolBroker::class);
         $this->app->singleton(UiCommandSigner::class);
         $this->app->singleton(ConfirmationEngine::class);
+        $this->app->singleton(UsageCostCalculator::class);
+        $this->app->singleton(SessionAuditManager::class);
+        $this->app->singleton(SessionAuditReconciler::class);
         $this->app->singleton(AgentSessionManager::class);
         $this->app->alias(AgentSessionManager::class, 'realtime-agent');
     }

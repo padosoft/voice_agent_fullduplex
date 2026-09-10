@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agents-full-duplex.dev/schemas/realtime-agent-message@1",
+  "title": "Realtime Agent Conversation Message v1",
+  "type": "object",
+  "required": ["id", "session_id", "seq", "provider", "role", "direction", "modality", "status", "content", "metadata", "occurred_at"],
+  "properties": {
+    "id": { "type": "string" },
+    "session_id": { "type": "string" },
+    "seq": { "type": "integer", "minimum": 1 },
+    "provider": { "type": "string" },
+    "provider_event_id": { "type": ["string", "null"] },
+    "role": { "enum": ["user", "assistant", "system", "tool"] },
+    "direction": { "enum": ["input", "output", "internal"] },
+    "modality": { "enum": ["text", "audio", "tool"] },
+    "status": { "enum": ["completed", "corrected", "interrupted"] },
+    "content": { "type": "string" },
+    "metadata": { "type": "object" },
+    "occurred_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

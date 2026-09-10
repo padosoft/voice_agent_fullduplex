@@ -46,6 +46,8 @@ final readonly class OpenAIRealtimeProvider implements RealtimeProviderContract
             connection: [
                 'transport' => 'webrtc',
                 'bootstrap_url' => $this->route($session->id),
+                'model' => $this->providerConfig('model'),
+                'transcription_model' => $this->providerConfig('transcription_model'),
                 'expires_in' => 3600,
             ],
             state: $session->state(),
@@ -72,7 +74,14 @@ final readonly class OpenAIRealtimeProvider implements RealtimeProviderContract
             'type' => 'realtime',
             'model' => $model,
             'instructions' => $instructions,
-            'audio' => ['output' => ['voice' => (string) $this->providerConfig('voice', 'marin')]],
+            'audio' => [
+                'input' => [
+                    'transcription' => [
+                        'model' => (string) $this->providerConfig('transcription_model', 'gpt-4o-mini-transcribe'),
+                    ],
+                ],
+                'output' => ['voice' => (string) $this->providerConfig('voice', 'marin')],
+            ],
             'tools' => array_map(static function (array $tool): array {
                 unset($tool['canonical_name']);
 
@@ -97,15 +106,25 @@ final readonly class OpenAIRealtimeProvider implements RealtimeProviderContract
             throw new \RuntimeException('OpenAI Realtime connection failed.', previous: $exception);
         }
 
+        $callUrl = $response->header('Location');
+        $callPath = is_string($callUrl) ? parse_url($callUrl, PHP_URL_PATH) : null;
+        $callId = is_string($callPath) ? basename($callPath) : null;
+
+        if (is_string($callId) && $callId !== '' && $callId !== '.') {
+            $session->setProviderSessionId($callId);
+        }
+
         return new ClientConnectionDescriptor(
             sessionId: $session->id,
             provider: 'openai',
             connection: [
                 'transport' => 'webrtc',
                 'answer_sdp' => $response->body(),
-                'call_url' => $response->header('Location'),
+                'call_url' => $callUrl,
                 'expires_at' => now()->addHour()->toISOString(),
                 'renegotiate_after_ms' => 55 * 60 * 1000,
+                'model' => $model,
+                'transcription_model' => $this->providerConfig('transcription_model'),
                 'session_instructions' => $instructions,
                 'tool_name_map' => array_column($toolSet->tools, 'canonical_name', 'name'),
             ],

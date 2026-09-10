@@ -21,6 +21,31 @@ final readonly class DatabaseToolCallStore implements ToolCallStoreContract
         private ConnectionInterface $database,
     ) {}
 
+    public function allForSession(string $sessionId): array
+    {
+        return AgentToolCallRecord::query()
+            ->where('session_id', $sessionId)
+            ->orderBy('started_at')
+            ->get()
+            ->map(static fn (AgentToolCallRecord $record): array => [
+                'id' => (string) $record->getKey(),
+                'provider_call_id' => $record->provider_call_id,
+                'tool' => (string) $record->tool,
+                'arguments' => (array) $record->arguments,
+                'base_revision' => (int) $record->base_revision,
+                'state_revision_before' => $record->state_revision_before,
+                'state_revision_after' => $record->state_revision_after,
+                'authorization_status' => (string) $record->authorization_status,
+                'confirmation_status' => (string) $record->confirmation_status,
+                'status' => (string) $record->status,
+                'result' => $record->result,
+                'error' => $record->error,
+                'started_at' => $record->started_at?->toISOString(),
+                'completed_at' => $record->completed_at?->toISOString(),
+            ])
+            ->all();
+    }
+
     public function completed(string $sessionId, string $idempotencyKey): ?ToolResult
     {
         $record = AgentToolCallRecord::query()

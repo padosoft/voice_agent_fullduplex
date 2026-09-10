@@ -6,6 +6,7 @@ namespace AgentsFullDuplex\RealtimeAgent\Data;
 
 use AgentsFullDuplex\RealtimeAgent\Contracts\StateStoreContract;
 use AgentsFullDuplex\RealtimeAgent\Contracts\ToolBrokerContract;
+use AgentsFullDuplex\RealtimeAgent\Engine\SessionAuditManager;
 
 class AgentSession
 {
@@ -15,6 +16,7 @@ class AgentSession
         public readonly mixed $owner,
         private readonly StateStoreContract $states,
         private readonly ToolBrokerContract $tools,
+        private readonly SessionAuditManager $audits,
         private ?ClientConnectionDescriptor $connection = null,
     ) {}
 
@@ -37,8 +39,35 @@ class AgentSession
         return $this->connection;
     }
 
+    public function providerSessionId(): ?string
+    {
+        return $this->states->providerSessionId($this->id);
+    }
+
+    public function setProviderSessionId(string $providerSessionId): void
+    {
+        $this->states->setProviderSessionId($this->id, $providerSessionId);
+    }
+
     public function execute(ToolCall $call): ToolResult
     {
         return $this->tools->execute($this, $call);
+    }
+
+    public function audit(): SessionAudit
+    {
+        return $this->audits->forSession($this);
+    }
+
+    /** @param array<string, mixed> $message */
+    public function recordMessage(array $message): ConversationMessage
+    {
+        return $this->audits->recordMessage($this, $message);
+    }
+
+    /** @param array<string, mixed> $usage */
+    public function recordUsage(array $usage): UsageRecord
+    {
+        return $this->audits->recordUsage($this, $usage);
     }
 }

@@ -8,4 +8,7 @@ export const WIRE_SCHEMAS = [
     "realtime-agent-goal@1",
     "realtime-agent-confirmation@1",
     "realtime-agent-connection@1",
+    "realtime-agent-message@1",
+    "realtime-agent-usage@1",
+    "realtime-agent-audit@1",
 ];

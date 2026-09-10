@@ -12,6 +12,8 @@
       <li data-goal="topic_3" data-completed="false">Calvin cycle</li>
     </ol>
     <output id="tool-results">0</output>
+    <output id="text-turns">0</output>
+    <output id="usage-records">0</output>
     <script type="module">
       import { FakeRealtimeDriver, RealtimeAgentClient, SurfaceRegistry } from "../dist/client.js";
 
@@ -21,6 +23,8 @@
         session: { id: "fake_session", revision: 1, status: "active" },
         pending: { actions: [], confirmations: [] },
       };
+      const messages = [];
+      const usage = [];
       const control = {
         async executeTool(call) {
           state.session.revision += 1;
@@ -64,6 +68,17 @@
         async resolveConfirmation() { throw new Error("No confirmation expected."); },
         async completeUiCommand() { state.session.revision += 1; return state; },
         async finish() { state.session.status = "completed"; state.session.revision += 1; return state; },
+        async recordMessage(message) {
+          messages.push(message);
+          return { ...message, id: `message_${messages.length}`, session_id: state.session.id, seq: messages.length, occurred_at: new Date().toISOString() };
+        },
+        async recordUsage(record) {
+          usage.push(record);
+          return { ...record, id: `usage_${usage.length}`, session_id: state.session.id, seq: usage.length, pricing: {}, amount: "0.00000000", currency: "USD", status: "final", occurred_at: new Date().toISOString() };
+        },
+        async fetchAudit() {
+          return { schema: "realtime-agent-audit@1", session_id: state.session.id, provider: "fake", provider_session_id: "fake_fake_session", messages, usage, tool_calls: [], totals: { estimated: {}, final: { USD: "0.00000000" }, effective: { USD: "0.00000000" }, unpriced_records: 0 } };
+        },
       };
       const surfaces = new SurfaceRegistry();
       surfaces.register({
@@ -106,6 +121,11 @@
       }
 
       document.querySelector("#tool-results").textContent = String(provider.toolResults.length);
+      await client.switchToText();
+      await client.sendText("Continue the completed lesson in text");
+      while (messages.length < 2 || usage.length < 1) await new Promise((resolve) => setTimeout(resolve, 0));
+      document.querySelector("#text-turns").textContent = String(messages.length);
+      document.querySelector("#usage-records").textContent = String(usage.length);
       document.body.dataset.status = (await client.refreshState()).session.status;
     </script>
   </body>

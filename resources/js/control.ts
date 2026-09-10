@@ -1,12 +1,17 @@
 import type {
   AgentState,
+  ConversationMessage,
+  ConversationMessageInput,
   ControlTransport,
   JsonObject,
   SurfaceSnapshot,
+  ProviderUsageInput,
+  SessionAudit,
   ToolCallInput,
   ToolResult,
   UiCommand,
   UiCommandResult,
+  UsageRecord,
 } from "./types.js";
 
 export class RealtimeControlError extends Error {
@@ -79,6 +84,24 @@ export class LaravelControlTransport implements ControlTransport {
       method: "DELETE",
       body: { base_revision: baseRevision },
     })).state;
+  }
+
+  async recordMessage(input: ConversationMessageInput): Promise<ConversationMessage> {
+    return (await this.json<{ message: ConversationMessage }>("/messages", {
+      method: "POST",
+      body: input,
+    })).message;
+  }
+
+  async recordUsage(input: ProviderUsageInput): Promise<UsageRecord> {
+    return (await this.json<{ usage: UsageRecord }>("/usage", {
+      method: "POST",
+      body: input,
+    })).usage;
+  }
+
+  async fetchAudit(): Promise<SessionAudit> {
+    return (await this.json<{ audit: SessionAudit }>("/audit", { method: "GET" })).audit;
   }
 
   private async json<T>(path: string, options: { method: string; body?: JsonObject }): Promise<T> {

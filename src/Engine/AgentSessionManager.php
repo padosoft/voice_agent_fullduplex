@@ -27,6 +27,7 @@ final readonly class AgentSessionManager
         private InitialStateFactory $stateFactory,
         private ProviderManager $providers,
         private Dispatcher $dispatcher,
+        private SessionAuditManager $audits,
     ) {}
 
     public function make(string $key): AgentDefinitionBuilder
@@ -51,11 +52,16 @@ final readonly class AgentSessionManager
             owner: $owner,
             states: $this->states,
             tools: $this->tools,
+            audits: $this->audits,
         );
 
         $provider = $this->providers->driver($definition->provider);
         $provider->materializeTools($session, $this->registry->forDefinition($definition));
-        $provider->prepare($session, $definition);
+        $providerSession = $provider->prepare($session, $definition);
+
+        if ($providerSession->providerSessionId !== null) {
+            $session->setProviderSessionId($providerSession->providerSessionId);
+        }
         $session->setConnection($provider->clientConnection($session));
 
         $this->events->append(
@@ -79,6 +85,7 @@ final readonly class AgentSessionManager
             owner: $this->states->owner($sessionId),
             states: $this->states,
             tools: $this->tools,
+            audits: $this->audits,
         );
 
         $session->setConnection($this->providers->driver($definition->provider)->clientConnection($session));

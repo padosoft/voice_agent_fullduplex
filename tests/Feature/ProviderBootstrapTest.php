@@ -62,7 +62,9 @@ final class ProviderBootstrapTest extends TestCase
         Http::assertSent(static fn (Request $request): bool => $request->url() === 'https://api.openai.com/v1/realtime/calls'
             && $request->hasHeader('Authorization', 'Bearer test-key')
             && $request->hasHeader('OpenAI-Safety-Identifier')
+            && str_contains($request->body(), 'gpt-4o-mini-transcribe')
         );
+        self::assertSame('call_1', $session->providerSessionId());
     }
 
     public function test_elevenlabs_tool_ids_are_cached_and_signed_url_is_faked(): void
@@ -90,6 +92,7 @@ final class ProviderBootstrapTest extends TestCase
             ->assertJsonPath('connection.signed_url', 'wss://example.test/signed')
             ->assertJsonPath('connection.tool_name_map.runtime_state_get', 'runtime.state.get');
 
+        self::assertSame('conversation_1', $session->providerSessionId());
         self::assertSame(1, ProviderToolRecord::query()->count());
         Http::assertSentCount(2);
     }

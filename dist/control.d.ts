@@ -1,4 +1,4 @@
-import type { AgentState, ControlTransport, SurfaceSnapshot, ToolCallInput, ToolResult, UiCommand, UiCommandResult } from "./types.js";
+import type { AgentState, ConversationMessage, ConversationMessageInput, ControlTransport, SurfaceSnapshot, ProviderUsageInput, SessionAudit, ToolCallInput, ToolResult, UiCommand, UiCommandResult, UsageRecord } from "./types.js";
 export declare class RealtimeControlError extends Error {
     readonly status: number;
     readonly code: string;
@@ -16,6 +16,9 @@ export declare class LaravelControlTransport implements ControlTransport {
     resolveConfirmation(id: string, accepted: boolean): Promise<ToolResult>;
     completeUiCommand(command: UiCommand, baseRevision: number, result: UiCommandResult): Promise<AgentState>;
     finish(baseRevision: number): Promise<AgentState>;
+    recordMessage(input: ConversationMessageInput): Promise<ConversationMessage>;
+    recordUsage(input: ProviderUsageInput): Promise<UsageRecord>;
+    fetchAudit(): Promise<SessionAudit>;
     private json;
     private csrfToken;
     private asObject;

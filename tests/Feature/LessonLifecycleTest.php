@@ -77,6 +77,9 @@ final class LessonLifecycleTest extends TestCase
 
         self::assertSame($first, $second);
         self::assertSame(2, $session->state()->revision());
+        self::assertSame('call_1', $session->audit()->toolCalls[0]['result']['call_id']);
+        self::assertSame('[redacted]', $session->audit()->toolCalls[0]['arguments']['evidence']);
+        self::assertSame('completed', $session->audit()->toolCalls[0]['status']);
 
         $this->expectException(RevisionConflict::class);
         $session->execute(new ToolCall(

@@ -17,6 +17,10 @@ interface StateStoreContract
 
     public function owner(string $sessionId): mixed;
 
+    public function providerSessionId(string $sessionId): ?string;
+
+    public function setProviderSessionId(string $sessionId, string $providerSessionId): void;
+
     public function mutate(
         string $sessionId,
         int $baseRevision,

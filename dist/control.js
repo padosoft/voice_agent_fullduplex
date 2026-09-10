@@ -61,6 +61,21 @@ export class LaravelControlTransport {
             body: { base_revision: baseRevision },
         })).state;
     }
+    async recordMessage(input) {
+        return (await this.json("/messages", {
+            method: "POST",
+            body: input,
+        })).message;
+    }
+    async recordUsage(input) {
+        return (await this.json("/usage", {
+            method: "POST",
+            body: input,
+        })).usage;
+    }
+    async fetchAudit() {
+        return (await this.json("/audit", { method: "GET" })).audit;
+    }
     async json(path, options) {
         const response = await this.request(`${this.baseUrl.replace(/\/$/, "")}/sessions/${encodeURIComponent(this.sessionId)}${path}`, {
             method: options.method,

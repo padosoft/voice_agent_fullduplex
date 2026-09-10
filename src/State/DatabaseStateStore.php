@@ -66,6 +66,20 @@ final readonly class DatabaseStateStore implements StateStoreContract
         return AgentSessionRecord::query()->findOrFail($sessionId)->owner;
     }
 
+    public function providerSessionId(string $sessionId): ?string
+    {
+        $value = AgentSessionRecord::query()->findOrFail($sessionId)->provider_session_id;
+
+        return $value !== null ? (string) $value : null;
+    }
+
+    public function setProviderSessionId(string $sessionId, string $providerSessionId): void
+    {
+        AgentSessionRecord::query()->findOrFail($sessionId)->forceFill([
+            'provider_session_id' => $providerSessionId,
+        ])->save();
+    }
+
     public function mutate(string $sessionId, int $baseRevision, StateMutation $mutation): AgentState
     {
         return $this->database->transaction(function () use ($sessionId, $baseRevision, $mutation): AgentState {

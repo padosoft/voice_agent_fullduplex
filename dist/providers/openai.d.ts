@@ -1,4 +1,6 @@
-import type { CanonicalProviderEvent, ConnectionDescriptor, JsonObject, RealtimeProviderDriver, ToolResult } from "../types.js";
+import type { CanonicalProviderEvent, ConnectionDescriptor, JsonObject, InteractionMode, RealtimeProviderDriver, ToolResult } from "../types.js";
+export declare function normalizeOpenAIResponseUsage(usage: JsonObject): Record<string, number>;
+export declare function openAIResponseCreateEvent(mode: InteractionMode): JsonObject;
 export declare class OpenAIRealtimeDriver implements RealtimeProviderDriver {
     private readonly request;
     private readonly peerFactory;
@@ -11,9 +13,14 @@ export declare class OpenAIRealtimeDriver implements RealtimeProviderDriver {
     private revision;
     private reconnectTimer;
     private toolNameMap;
+    private mode;
+    private model;
+    private transcriptionModel;
+    private readonly audioElements;
     constructor(request?: typeof fetch, peerFactory?: () => RTCPeerConnection, mediaDevices?: MediaDevices | undefined);
     connect(descriptor: ConnectionDescriptor): Promise<void>;
     disconnect(): Promise<void>;
+    setMode(mode: InteractionMode): Promise<void>;
     sendText(text: string): Promise<void>;
     sendContext(update: JsonObject): Promise<void>;
     submitToolResult(result: ToolResult): Promise<void>;
@@ -21,6 +28,8 @@ export declare class OpenAIRealtimeDriver implements RealtimeProviderDriver {
     private negotiate;
     private handleMessage;
     private send;
+    private responseCreateEvent;
     private reconnect;
     private csrfToken;
+    private asObject;
 }

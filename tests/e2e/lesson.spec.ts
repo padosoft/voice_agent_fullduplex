@@ -6,4 +6,6 @@ test("three goals update the Surface and finish the fake session", async ({ page
   await expect(page.locator("body")).toHaveAttribute("data-status", "completed");
   await expect(page.locator("[data-goal][data-completed='true']")).toHaveCount(3);
   await expect(page.locator("#tool-results")).toHaveText("6");
+  await expect(page.locator("#text-turns")).toHaveText("2");
+  await expect(page.locator("#usage-records")).toHaveText("1");
 });

@@ -10,6 +10,9 @@ const expectedFiles = [
   "goal.schema.json",
   "confirmation.schema.json",
   "connection.schema.json",
+  "message.schema.json",
+  "usage.schema.json",
+  "audit.schema.json",
 ];
 const files = (await readdir(new URL("../resources/schema/", import.meta.url))).sort();
 

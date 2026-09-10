@@ -65,5 +65,32 @@ final class DatabasePersistenceTest extends TestCase
             '[redacted]',
             json_decode(DB::table('realtime_agent_tool_calls')->value('arguments'), true)['evidence'],
         );
+
+        $session->recordMessage([
+            'provider' => 'fake',
+            'provider_event_id' => 'db-message',
+            'idempotency_key' => 'db-message',
+            'role' => 'assistant',
+            'direction' => 'output',
+            'modality' => 'text',
+            'status' => 'completed',
+            'content' => 'Persisted transcript.',
+        ]);
+        $session->recordUsage([
+            'provider' => 'fake',
+            'provider_event_id' => 'db-usage',
+            'idempotency_key' => 'db-usage',
+            'kind' => 'response',
+            'model' => 'fake-realtime',
+            'units' => ['input_text_tokens' => 4],
+        ]);
+
+        self::assertSame(1, DB::table('realtime_agent_messages')->count());
+        self::assertSame(1, DB::table('realtime_agent_usage')->count());
+        self::assertCount(1, $session->audit()->messages);
+        self::assertCount(1, $session->audit()->usage);
+        self::assertSame('call_1', $session->audit()->toolCalls[0]['result']['call_id']);
+        self::assertSame('[redacted]', $session->audit()->toolCalls[0]['arguments']['evidence']);
+        self::assertSame('completed', $session->audit()->toolCalls[0]['status']);
     }
 }

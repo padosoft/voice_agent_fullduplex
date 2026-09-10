@@ -22,6 +22,9 @@ final class ArrayStateStore implements StateStoreContract
     /** @var array<string, mixed> */
     private array $owners = [];
 
+    /** @var array<string, string> */
+    private array $providerSessionIds = [];
+
     public function create(AgentState $state, mixed $owner, AgentDefinition $definition): AgentState
     {
         if (isset($this->states[$state->sessionId()])) {
@@ -53,6 +56,17 @@ final class ArrayStateStore implements StateStoreContract
         }
 
         return $this->owners[$sessionId];
+    }
+
+    public function providerSessionId(string $sessionId): ?string
+    {
+        return $this->providerSessionIds[$sessionId] ?? null;
+    }
+
+    public function setProviderSessionId(string $sessionId, string $providerSessionId): void
+    {
+        $this->get($sessionId);
+        $this->providerSessionIds[$sessionId] = $providerSessionId;
     }
 
     public function mutate(string $sessionId, int $baseRevision, StateMutation $mutation): AgentState

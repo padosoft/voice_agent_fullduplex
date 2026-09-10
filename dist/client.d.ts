@@ -1,4 +1,4 @@
-import type { AgentState, ConfirmationHandler, ConnectionDescriptor, ControlTransport, RealtimeAgentClientEvent, RealtimeProviderDriver } from "./types.js";
+import type { AgentState, ConfirmationHandler, ConnectionDescriptor, ControlTransport, RealtimeAgentClientEvent, RealtimeProviderDriver, SessionAudit } from "./types.js";
 import { SurfaceRegistry } from "./surface/registry.js";
 export interface RealtimeAgentClientOptions {
     confirmation?: ConfirmationHandler;
@@ -18,19 +18,27 @@ export declare class RealtimeAgentClient {
     private executor;
     private surfaceTimer;
     private lastSurface;
+    private providerName;
+    private interactionMode;
     constructor(surfaces: SurfaceRegistry, provider: RealtimeProviderDriver, control: ControlTransport, options?: RealtimeAgentClientOptions);
     connect(descriptor: ConnectionDescriptor): Promise<void>;
     disconnect(): Promise<void>;
     sendText(text: string): Promise<void>;
+    switchToText(): Promise<void>;
+    switchToVoice(): Promise<void>;
+    audit(): Promise<SessionAudit>;
     refreshState(): Promise<AgentState>;
     finish(): Promise<AgentState>;
     on(listener: (event: RealtimeAgentClientEvent) => void): () => void;
     private handleToolCall;
+    private persistProviderEvent;
     private executeUiCommand;
     private confirm;
     private scheduleSurfaceSync;
     private syncSurface;
     private revision;
+    private providerId;
+    private uniqueId;
     private setRevision;
     private setState;
 }

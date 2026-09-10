@@ -41,6 +41,8 @@ final class DoctorCommand extends Command
                     'realtime_agent_events',
                     'realtime_agent_tool_calls',
                     'realtime_agent_provider_tools',
+                    'realtime_agent_messages',
+                    'realtime_agent_usage',
                 ];
                 $missing = array_values(array_filter($tables, static fn (string $table): bool => ! $schema->hasTable($table)));
                 $checks['Database schema'] = $missing === [] ? 'ready' : 'missing: '.implode(', ', $missing);

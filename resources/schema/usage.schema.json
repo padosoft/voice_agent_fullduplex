@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agents-full-duplex.dev/schemas/realtime-agent-usage@1",
+  "title": "Realtime Agent Provider Usage v1",
+  "type": "object",
+  "required": ["id", "session_id", "seq", "provider", "kind", "units", "raw", "amount", "currency", "status", "occurred_at"],
+  "properties": {
+    "id": { "type": "string" },
+    "session_id": { "type": "string" },
+    "seq": { "type": "integer", "minimum": 1 },
+    "provider": { "type": "string" },
+    "provider_event_id": { "type": ["string", "null"] },
+    "kind": { "enum": ["response", "transcription", "duration", "conversation", "provider_invoice"] },
+    "model": { "type": ["string", "null"] },
+    "units": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0 } },
+    "raw": { "type": "object" },
+    "pricing": { "type": ["object", "null"] },
+    "amount": { "type": ["string", "null"], "pattern": "^[0-9]+\\.[0-9]{8}$" },
+    "currency": { "type": "string", "minLength": 3, "maxLength": 3 },
+    "status": { "enum": ["estimated", "final", "unpriced"] },
+    "occurred_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

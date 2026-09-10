@@ -7,6 +7,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/sessions/{session}', [RealtimeAgentController::class, 'state'])->name('realtime-agent.state');
 Route::post('/sessions/{session}/connect', [RealtimeAgentController::class, 'connect'])->name('realtime-agent.connect');
+Route::get('/sessions/{session}/audit', [RealtimeAgentController::class, 'audit'])->name('realtime-agent.audit');
+Route::post('/sessions/{session}/audit/reconcile', [RealtimeAgentController::class, 'reconcileAudit'])->name('realtime-agent.audit.reconcile');
+Route::post('/sessions/{session}/messages', [RealtimeAgentController::class, 'message'])->name('realtime-agent.messages');
+Route::post('/sessions/{session}/usage', [RealtimeAgentController::class, 'usage'])->name('realtime-agent.usage');
 Route::put('/sessions/{session}/surface', [RealtimeAgentController::class, 'surface'])->name('realtime-agent.surface');
 Route::patch('/sessions/{session}/surface', [RealtimeAgentController::class, 'patchSurface'])->name('realtime-agent.surface.patch');
 Route::post('/sessions/{session}/tools', [RealtimeAgentController::class, 'tool'])->name('realtime-agent.tools');

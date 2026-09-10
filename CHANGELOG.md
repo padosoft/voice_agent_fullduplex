@@ -14,3 +14,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Framework-neutral TypeScript client with DOM Surface adapter, semantic diffing, UI command execution, and reconnection support.
 - Deterministic Fake Provider plus OpenAI WebRTC and ElevenLabs WebSocket adapters.
 - PHPUnit, Vitest, and Playwright coverage with provider HTTP fakes.
+- Ordered, provider-neutral conversation transcripts with voice-to-text continuation on the same session.
+- Versioned usage and cost records, OpenAI token accounting, ElevenLabs post-call reconciliation, and authorized audit exports.
+- Laravel audit events for external ledgers, observability pipelines, and transcript archives.

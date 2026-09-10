@@ -1,0 +1,55 @@
+{
+    "name": "agents-full-duplex/laravel-realtime-agent",
+    "description": "Provider-neutral Laravel core and browser bridge for full-duplex realtime agents.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "laravel",
+        "realtime",
+        "agents",
+        "voice",
+        "full-duplex"
+    ],
+    "require": {
+        "php": "^8.2",
+        "illuminate/contracts": "^11.0 || ^12.0 || ^13.0",
+        "illuminate/database": "^11.0 || ^12.0 || ^13.0",
+        "illuminate/support": "^11.0 || ^12.0 || ^13.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.0 || ^10.0 || ^11.0",
+        "phpunit/phpunit": "^11.0 || ^12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "AgentsFullDuplex\\RealtimeAgent\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "AgentsFullDuplex\\RealtimeAgent\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "demo": "php examples/lesson.php"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "AgentsFullDuplex\\RealtimeAgent\\RealtimeAgentServiceProvider"
+            ],
+            "aliases": {
+                "RealtimeAgent": "AgentsFullDuplex\\RealtimeAgent\\Facades\\RealtimeAgent"
+            }
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

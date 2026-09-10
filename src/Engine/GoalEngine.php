@@ -11,8 +11,8 @@ use AgentsFullDuplex\RealtimeAgent\Data\AgentSession;
 use AgentsFullDuplex\RealtimeAgent\Data\AgentState;
 use AgentsFullDuplex\RealtimeAgent\Engine\Mutations\ReplaceState;
 use AgentsFullDuplex\RealtimeAgent\Enums\GoalStatus;
-use AgentsFullDuplex\RealtimeAgent\Exceptions\ToolCallRejected;
 use AgentsFullDuplex\RealtimeAgent\Events\AgentGoalCompleted;
+use AgentsFullDuplex\RealtimeAgent\Exceptions\ToolCallRejected;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 
@@ -23,8 +23,8 @@ final readonly class GoalEngine
         private EventStoreContract $events,
         private Container $container,
         private Dispatcher $dispatcher,
-    ) {
-    }
+        private StateOwnershipGuard $ownership,
+    ) {}
 
     public function update(
         AgentSession $session,
@@ -33,6 +33,8 @@ final readonly class GoalEngine
         GoalStatus $status,
         ?string $evidence = null,
     ): AgentState {
+        $this->ownership->authorize($session, '/mission/goals', 'agent');
+
         $policy = $this->container->make($session->definition->finishPolicy);
 
         if (! $policy instanceof FinishPolicyContract) {
@@ -42,7 +44,7 @@ final readonly class GoalEngine
         $next = $this->states->mutate(
             $session->id,
             $baseRevision,
-            new ReplaceState(static function (AgentState $current) use ($goalId, $status, $evidence, $policy): array {
+            new ReplaceState(static function (AgentState $current) use ($goalId, $status, $evidence, $policy, $session): array {
                 $state = $current->toArray();
                 $found = false;
 
@@ -68,6 +70,22 @@ final readonly class GoalEngine
                         : null;
                 }
                 unset($goal);
+
+                if (! $found && $session->definition->allowAgentGoals) {
+                    $state['mission']['goals'][] = [
+                        'id' => $goalId,
+                        'label' => $goalId,
+                        'description' => null,
+                        'status' => $status->value,
+                        'required' => false,
+                        'source' => 'agent',
+                        'completion' => ['mode' => 'agent_judgement', 'requires_evidence' => false],
+                        'evidence' => $evidence,
+                        'created_at' => now()->toISOString(),
+                        'completed_at' => $status === GoalStatus::Completed ? now()->toISOString() : null,
+                    ];
+                    $found = true;
+                }
 
                 if (! $found) {
                     throw new ToolCallRejected("Unknown goal: {$goalId}.");

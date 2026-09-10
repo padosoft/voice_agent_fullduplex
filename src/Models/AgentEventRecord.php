@@ -6,7 +6,18 @@ namespace AgentsFullDuplex\RealtimeAgent\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $session_id
+ * @property int $seq
+ * @property string $type
+ * @property string $source
+ * @property array<string, mixed> $payload
+ * @property int $state_revision
+ * @property string|null $provider_event_id
+ * @property Carbon $created_at
+ */
 final class AgentEventRecord extends Model
 {
     use HasUlids;

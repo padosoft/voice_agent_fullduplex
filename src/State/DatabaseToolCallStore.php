@@ -19,8 +19,7 @@ final readonly class DatabaseToolCallStore implements ToolCallStoreContract
     public function __construct(
         private Config $config,
         private ConnectionInterface $database,
-    ) {
-    }
+    ) {}
 
     public function completed(string $sessionId, string $idempotencyKey): ?ToolResult
     {
@@ -66,6 +65,10 @@ final readonly class DatabaseToolCallStore implements ToolCallStoreContract
                     'provider_call_id' => $call->providerCallId,
                     'tool' => $call->name,
                     'arguments' => $this->argumentsForAudit($call->arguments),
+                    'base_revision' => $call->baseRevision,
+                    'state_revision_before' => $call->baseRevision,
+                    'authorization_status' => 'allowed',
+                    'confirmation_status' => $call->confirmed ? 'accepted' : 'not_required',
                     'status' => 'started',
                     'result' => null,
                     'error' => null,
@@ -89,6 +92,7 @@ final readonly class DatabaseToolCallStore implements ToolCallStoreContract
         $record->forceFill([
             'status' => 'completed',
             'result' => $result->toArray(),
+            'state_revision_after' => $result->stateRevision,
             'completed_at' => now(),
         ])->save();
     }
@@ -112,7 +116,7 @@ final readonly class DatabaseToolCallStore implements ToolCallStoreContract
     }
 
     /**
-     * @param array<string, mixed> $arguments
+     * @param  array<string, mixed>  $arguments
      * @return array<string, mixed>
      */
     private function argumentsForAudit(array $arguments): array

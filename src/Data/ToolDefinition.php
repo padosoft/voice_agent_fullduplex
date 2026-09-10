@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AgentsFullDuplex\RealtimeAgent\Data;
 
+use AgentsFullDuplex\RealtimeAgent\Confirmation;
 use AgentsFullDuplex\RealtimeAgent\Enums\ToolTarget;
 use JsonSerializable;
 
@@ -24,13 +25,25 @@ final class ToolDefinition implements JsonSerializable
 
     private string $confirmation = 'never';
 
-    private function __construct(private readonly string $name)
-    {
-    }
+    private function __construct(private readonly string $name) {}
 
     public static function make(string $name): self
     {
         return new self($name);
+    }
+
+    /** @param array<string, mixed> $data */
+    public static function fromArray(array $data): self
+    {
+        $tool = new self((string) $data['name']);
+        $tool->description = (string) ($data['description'] ?? '');
+        $tool->input = (array) ($data['input_schema'] ?? ['type' => 'object', 'properties' => []]);
+        $tool->target = ToolTarget::from((string) ($data['target'] ?? ToolTarget::Server->value));
+        $tool->handler = $data['handler'] ?? null;
+        $tool->authorizer = $data['authorizer'] ?? null;
+        $tool->confirmation = (string) ($data['confirmation'] ?? 'never');
+
+        return $tool;
     }
 
     public function name(): string
@@ -45,9 +58,41 @@ final class ToolDefinition implements JsonSerializable
         return $this;
     }
 
-    /** @param array<string, mixed> $schema */
-    public function input(array $schema): self
+    /** @param array<string, mixed>|SchemaType $schema */
+    public function input(array|SchemaType $schema): self
     {
+        if ($schema instanceof SchemaType) {
+            $this->input = $schema->toArray();
+
+            return $this;
+        }
+
+        if (! isset($schema['type'])) {
+            $required = [];
+            $properties = [];
+
+            foreach ($schema as $name => $property) {
+                if ($property instanceof SchemaType) {
+                    $properties[$name] = $property->toArray();
+
+                    if ($property->isRequired()) {
+                        $required[] = $name;
+                    }
+                } else {
+                    $properties[$name] = $property;
+                }
+            }
+
+            $this->input = [
+                'type' => 'object',
+                'properties' => $properties,
+                'required' => $required,
+                'additionalProperties' => false,
+            ];
+
+            return $this;
+        }
+
         $this->input = isset($schema['type'])
             ? $schema
             : ['type' => 'object', 'properties' => $schema];
@@ -78,11 +123,16 @@ final class ToolDefinition implements JsonSerializable
         return $this;
     }
 
-    public function confirmation(string $policy): self
+    public function confirmation(string|Confirmation $policy): self
     {
-        $this->confirmation = $policy;
+        $this->confirmation = (string) $policy;
 
         return $this;
+    }
+
+    public function descriptionText(): string
+    {
+        return $this->description;
     }
 
     /** @return array<string, mixed> */
@@ -120,6 +170,21 @@ final class ToolDefinition implements JsonSerializable
             'input_schema' => $this->input,
             'target' => $this->target->value,
             'confirmation' => $this->confirmation,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    public function toPersistentArray(): array
+    {
+        if (($this->handler !== null && ! is_string($this->handler))
+            || ($this->authorizer !== null && ! is_string($this->authorizer))) {
+            throw new \LogicException('Persisted agent definitions require class-string handlers and authorizers.');
+        }
+
+        return [
+            ...$this->toArray(),
+            'handler' => $this->handler,
+            'authorizer' => $this->authorizer,
         ];
     }
 

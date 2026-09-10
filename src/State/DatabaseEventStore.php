@@ -7,14 +7,13 @@ namespace AgentsFullDuplex\RealtimeAgent\State;
 use AgentsFullDuplex\RealtimeAgent\Contracts\EventStoreContract;
 use AgentsFullDuplex\RealtimeAgent\Data\CanonicalEvent;
 use AgentsFullDuplex\RealtimeAgent\Models\AgentEventRecord;
+use AgentsFullDuplex\RealtimeAgent\Models\AgentSessionRecord;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Str;
 
 final readonly class DatabaseEventStore implements EventStoreContract
 {
-    public function __construct(private ConnectionInterface $database)
-    {
-    }
+    public function __construct(private ConnectionInterface $database) {}
 
     public function append(
         string $sessionId,
@@ -32,16 +31,16 @@ final readonly class DatabaseEventStore implements EventStoreContract
             $payload,
             $providerEventId,
         ): CanonicalEvent {
-            $last = AgentEventRecord::query()
-                ->where('session_id', $sessionId)
-                ->lockForUpdate()
-                ->max('seq');
+            /** @var AgentSessionRecord $session */
+            $session = AgentSessionRecord::query()->lockForUpdate()->findOrFail($sessionId);
+            $sequence = ((int) $session->event_sequence) + 1;
+            $session->forceFill(['event_sequence' => $sequence])->save();
 
             $event = new CanonicalEvent(
                 version: 1,
                 id: 'evt_'.Str::ulid(),
                 sessionId: $sessionId,
-                sequence: ((int) $last) + 1,
+                sequence: $sequence,
                 type: $type,
                 source: $source,
                 timestamp: now()->toISOString(),

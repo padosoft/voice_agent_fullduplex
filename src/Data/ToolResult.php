@@ -9,8 +9,8 @@ use JsonSerializable;
 final readonly class ToolResult implements JsonSerializable
 {
     /**
-     * @param array<string, mixed>|null $output
-     * @param array<string, mixed>|null $error
+     * @param  array<string, mixed>|null  $output
+     * @param  array<string, mixed>|null  $error
      */
     public function __construct(
         public string $callId,
@@ -18,8 +18,7 @@ final readonly class ToolResult implements JsonSerializable
         public ?array $output,
         public ?array $error,
         public int $stateRevision,
-    ) {
-    }
+    ) {}
 
     /** @return array<string, mixed> */
     public function toArray(): array

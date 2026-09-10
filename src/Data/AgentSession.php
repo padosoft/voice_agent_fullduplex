@@ -7,7 +7,7 @@ namespace AgentsFullDuplex\RealtimeAgent\Data;
 use AgentsFullDuplex\RealtimeAgent\Contracts\StateStoreContract;
 use AgentsFullDuplex\RealtimeAgent\Contracts\ToolBrokerContract;
 
-final class AgentSession
+class AgentSession
 {
     public function __construct(
         public readonly string $id,
@@ -16,8 +16,7 @@ final class AgentSession
         private readonly StateStoreContract $states,
         private readonly ToolBrokerContract $tools,
         private ?ClientConnectionDescriptor $connection = null,
-    ) {
-    }
+    ) {}
 
     public function state(): AgentState
     {

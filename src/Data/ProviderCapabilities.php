@@ -14,6 +14,5 @@ final readonly class ProviderCapabilities
         public bool $nativeContextUpdates,
         public bool $clientTools,
         public bool $serverSideControl,
-    ) {
-    }
+    ) {}
 }

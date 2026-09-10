@@ -9,9 +9,7 @@ use AgentsFullDuplex\RealtimeAgent\Data\AgentState;
 
 final class InitialStateFactory
 {
-    public function __construct(private readonly ToolRegistry $tools)
-    {
-    }
+    public function __construct(private readonly ToolRegistry $tools) {}
 
     public function make(string $sessionId, AgentDefinition $definition, string $startedAt): AgentState
     {

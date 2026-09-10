@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace AgentsFullDuplex\RealtimeAgent\Tests\Feature;
 
 use AgentsFullDuplex\RealtimeAgent\Contracts\EventStoreContract;
+use AgentsFullDuplex\RealtimeAgent\Data\AgentSession;
 use AgentsFullDuplex\RealtimeAgent\Data\ToolCall;
 use AgentsFullDuplex\RealtimeAgent\Engine\AgentSessionManager;
 use AgentsFullDuplex\RealtimeAgent\Enums\InteractionLevel;
 use AgentsFullDuplex\RealtimeAgent\Exceptions\RevisionConflict;
+use AgentsFullDuplex\RealtimeAgent\Exceptions\ToolCallRejected;
 use AgentsFullDuplex\RealtimeAgent\Goal;
 use AgentsFullDuplex\RealtimeAgent\Tests\TestCase;
 use AgentsFullDuplex\RealtimeAgent\Tools\RuntimeStateGet;
@@ -113,7 +115,46 @@ final class LessonLifecycleTest extends TestCase
         self::assertSame(2, $session->state()->revision());
     }
 
-    private function lessonSession(): \AgentsFullDuplex\RealtimeAgent\Data\AgentSession
+    public function test_declared_state_ownership_rejects_the_wrong_actor(): void
+    {
+        $session = $this->app->make(AgentSessionManager::class)
+            ->make('ownership.lesson')
+            ->tools([UpdateWorkingMemory::class])
+            ->stateOwnership(['/working_memory' => 'application'])
+            ->startFor(null);
+
+        $this->expectException(ToolCallRejected::class);
+        $this->expectExceptionMessage('owned by application');
+        $session->execute(new ToolCall(
+            id: 'memory_forbidden',
+            name: 'working_memory.update',
+            arguments: ['summary' => 'Not permitted'],
+            baseRevision: 1,
+            idempotencyKey: 'memory-forbidden',
+        ));
+    }
+
+    public function test_agent_goals_are_created_only_when_enabled(): void
+    {
+        $session = $this->app->make(AgentSessionManager::class)
+            ->make('agent.goals')
+            ->tools([UpdateGoal::class])
+            ->allowAgentGoals()
+            ->startFor(null);
+
+        $session->execute(new ToolCall(
+            id: 'goal_created',
+            name: 'goal.update',
+            arguments: ['goal_id' => 'follow_up', 'status' => 'active'],
+            baseRevision: 1,
+            idempotencyKey: 'goal-created',
+        ));
+
+        self::assertSame('agent', $session->state()->goals()[0]['source']);
+        self::assertSame('follow_up', $session->state()->goals()[0]['id']);
+    }
+
+    private function lessonSession(): AgentSession
     {
         return $this->app->make(AgentSessionManager::class)
             ->make('demo.lesson.teacher')

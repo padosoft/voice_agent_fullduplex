@@ -15,9 +15,7 @@ use AgentsFullDuplex\RealtimeAgent\Tool;
 
 final readonly class UpdateWorkingMemory implements ToolContract, ToolHandlerContract
 {
-    public function __construct(private StateEngine $states)
-    {
-    }
+    public function __construct(private StateEngine $states) {}
 
     public function definition(): ToolDefinition
     {

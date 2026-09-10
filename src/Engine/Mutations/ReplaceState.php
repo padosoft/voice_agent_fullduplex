@@ -10,9 +10,7 @@ use AgentsFullDuplex\RealtimeAgent\Data\AgentState;
 final readonly class ReplaceState implements StateMutation
 {
     /** @param callable(AgentState): array<string, mixed> $callback */
-    public function __construct(private mixed $callback)
-    {
-    }
+    public function __construct(private mixed $callback) {}
 
     public function apply(AgentState $state): array
     {

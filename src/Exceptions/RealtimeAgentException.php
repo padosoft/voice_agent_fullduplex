@@ -6,6 +6,4 @@ namespace AgentsFullDuplex\RealtimeAgent\Exceptions;
 
 use RuntimeException;
 
-class RealtimeAgentException extends RuntimeException
-{
-}
+class RealtimeAgentException extends RuntimeException {}

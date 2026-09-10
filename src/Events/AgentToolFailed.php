@@ -13,6 +13,5 @@ final readonly class AgentToolFailed
         public string $sessionId,
         public ToolCall $call,
         public Throwable $error,
-    ) {
-    }
+    ) {}
 }

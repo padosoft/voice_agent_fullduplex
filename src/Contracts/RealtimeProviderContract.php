@@ -10,6 +10,7 @@ use AgentsFullDuplex\RealtimeAgent\Data\ClientConnectionDescriptor;
 use AgentsFullDuplex\RealtimeAgent\Data\ProviderCapabilities;
 use AgentsFullDuplex\RealtimeAgent\Data\ProviderSession;
 use AgentsFullDuplex\RealtimeAgent\Data\ProviderToolSet;
+use AgentsFullDuplex\RealtimeAgent\Data\ToolDefinition;
 
 interface RealtimeProviderContract
 {
@@ -19,6 +20,8 @@ interface RealtimeProviderContract
 
     public function clientConnection(AgentSession $session): ClientConnectionDescriptor;
 
-    /** @param iterable<\AgentsFullDuplex\RealtimeAgent\Data\ToolDefinition> $tools */
+    public function connect(AgentSession $session, ?string $offer = null): ClientConnectionDescriptor;
+
+    /** @param iterable<ToolDefinition> $tools */
     public function materializeTools(AgentSession $session, iterable $tools): ProviderToolSet;
 }

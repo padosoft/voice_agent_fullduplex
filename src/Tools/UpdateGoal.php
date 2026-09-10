@@ -16,9 +16,7 @@ use AgentsFullDuplex\RealtimeAgent\Tool;
 
 final readonly class UpdateGoal implements ToolContract, ToolHandlerContract
 {
-    public function __construct(private GoalEngine $goals)
-    {
-    }
+    public function __construct(private GoalEngine $goals) {}
 
     public function definition(): ToolDefinition
     {

@@ -13,9 +13,15 @@ final class OpenAIToolMapper
     {
         return [
             'type' => 'function',
-            'name' => $tool->name(),
-            'description' => $tool->toArray()['description'],
+            'name' => $this->providerName($tool->name()),
+            'description' => $tool->descriptionText(),
             'parameters' => $tool->schema(),
+            'canonical_name' => $tool->name(),
         ];
+    }
+
+    public function providerName(string $canonicalName): string
+    {
+        return str_replace('.', '_', $canonicalName);
     }
 }

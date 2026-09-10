@@ -11,6 +11,7 @@ use AgentsFullDuplex\RealtimeAgent\Data\ToolCall;
 use AgentsFullDuplex\RealtimeAgent\Data\ToolDefinition;
 use AgentsFullDuplex\RealtimeAgent\Data\UiCommand;
 use AgentsFullDuplex\RealtimeAgent\Engine\StateEngine;
+use AgentsFullDuplex\RealtimeAgent\Engine\UiCommandSigner;
 use AgentsFullDuplex\RealtimeAgent\Enums\InteractionLevel;
 use AgentsFullDuplex\RealtimeAgent\Enums\ToolTarget;
 use AgentsFullDuplex\RealtimeAgent\Exceptions\ToolCallRejected;
@@ -19,9 +20,10 @@ use Illuminate\Support\Str;
 
 final readonly class ExecuteUiAction implements ToolContract, ToolHandlerContract
 {
-    public function __construct(private StateEngine $states)
-    {
-    }
+    public function __construct(
+        private StateEngine $states,
+        private UiCommandSigner $signer,
+    ) {}
 
     public function definition(): ToolDefinition
     {
@@ -66,7 +68,7 @@ final readonly class ExecuteUiAction implements ToolContract, ToolHandlerContrac
             throw new ToolCallRejected('The requested action is not registered for this target.');
         }
 
-        $command = new UiCommand(
+        $unsigned = new UiCommand(
             id: 'cmd_'.Str::ulid(),
             sessionId: $session->id,
             callId: $call->id,
@@ -78,6 +80,7 @@ final readonly class ExecuteUiAction implements ToolContract, ToolHandlerContrac
             expiresAt: now()->addSeconds((int) config('realtime-agent.security.ui_command_ttl_seconds', 15))->toISOString(),
             nonce: Str::random(40),
         );
+        $command = $unsigned->withToken($this->signer->sign($unsigned));
 
         $next = $this->states->queueUiCommand($session, $call->baseRevision, $command);
 

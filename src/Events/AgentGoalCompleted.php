@@ -13,6 +13,5 @@ final readonly class AgentGoalCompleted
         public string $goalId,
         public ?string $evidence,
         public AgentState $state,
-    ) {
-    }
+    ) {}
 }

@@ -12,6 +12,5 @@ final readonly class AgentStateChanged
         public string $sessionId,
         public AgentState $state,
         public string $path,
-    ) {
-    }
+    ) {}
 }

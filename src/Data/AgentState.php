@@ -9,9 +9,7 @@ use JsonSerializable;
 final readonly class AgentState implements JsonSerializable
 {
     /** @param array<string, mixed> $data */
-    private function __construct(private array $data)
-    {
-    }
+    private function __construct(private array $data) {}
 
     /** @param array<string, mixed> $data */
     public static function fromArray(array $data): self

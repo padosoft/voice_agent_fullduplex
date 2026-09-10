@@ -28,7 +28,7 @@ use Illuminate\Support\Facades\Facade;
 
 require __DIR__.'/../vendor/autoload.php';
 
-$container = new Container();
+$container = new Container;
 Container::setInstance($container);
 Facade::setFacadeApplication($container);
 
@@ -40,7 +40,7 @@ $config = new Repository(['realtime-agent' => $configuration]);
 $container->instance(ContainerContract::class, $container);
 $container->instance(ConfigContract::class, $config);
 $container->instance('config', $config);
-$container->singleton('date', static fn (): DateFactory => new DateFactory());
+$container->singleton('date', static fn (): DateFactory => new DateFactory);
 $container->singleton(DispatcherContract::class, static fn (Container $container): Dispatcher => new Dispatcher($container));
 $container->singleton(StateStoreContract::class, ArrayStateStore::class);
 $container->singleton(EventStoreContract::class, ArrayEventStore::class);

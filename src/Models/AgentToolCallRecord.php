@@ -7,6 +7,10 @@ namespace AgentsFullDuplex\RealtimeAgent\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property string $status
+ * @property array<string, mixed>|null $result
+ */
 final class AgentToolCallRecord extends Model
 {
     use HasUlids;

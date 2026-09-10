@@ -12,8 +12,8 @@ final class JsonSchemaValidator
      * A deliberately small JSON Schema subset for tool arguments. Applications
      * can replace the broker when they need a complete Draft implementation.
      *
-     * @param array<string, mixed> $schema
-     * @param array<string, mixed> $arguments
+     * @param  array<string, mixed>  $schema
+     * @param  array<string, mixed>  $arguments
      */
     public function validate(array $schema, array $arguments): void
     {

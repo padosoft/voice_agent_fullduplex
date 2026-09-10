@@ -14,8 +14,7 @@ final readonly class ClientConnectionDescriptor implements JsonSerializable
         public string $provider,
         public array $connection,
         public AgentState $state,
-    ) {
-    }
+    ) {}
 
     /** @return array<string, mixed> */
     public function jsonSerialize(): array

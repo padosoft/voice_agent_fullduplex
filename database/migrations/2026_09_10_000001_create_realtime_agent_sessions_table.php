@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -16,7 +18,9 @@ return new class extends Migration
             $table->string('provider_session_id')->nullable();
             $table->string('status')->index();
             $table->json('state');
+            $table->json('definition');
             $table->unsignedBigInteger('state_revision');
+            $table->unsignedBigInteger('event_sequence')->default(0);
             $table->json('metadata')->nullable();
             $table->timestamp('started_at');
             $table->timestamp('ended_at')->nullable();

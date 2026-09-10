@@ -13,6 +13,5 @@ final readonly class AgentToolCalled
         public string $sessionId,
         public ToolCall $call,
         public ToolResult $result,
-    ) {
-    }
+    ) {}
 }

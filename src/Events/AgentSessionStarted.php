@@ -8,7 +8,5 @@ use AgentsFullDuplex\RealtimeAgent\Data\AgentSession;
 
 final readonly class AgentSessionStarted
 {
-    public function __construct(public AgentSession $session)
-    {
-    }
+    public function __construct(public AgentSession $session) {}
 }

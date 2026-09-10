@@ -20,8 +20,7 @@ final readonly class CanonicalEvent implements JsonSerializable
         public int $stateRevision,
         public array $payload,
         public ?string $providerEventId = null,
-    ) {
-    }
+    ) {}
 
     /** @return array<string, mixed> */
     public function jsonSerialize(): array

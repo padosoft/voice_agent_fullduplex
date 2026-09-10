@@ -6,8 +6,8 @@ namespace AgentsFullDuplex\RealtimeAgent\Engine;
 
 use AgentsFullDuplex\RealtimeAgent\Contracts\FinishPolicyContract;
 use AgentsFullDuplex\RealtimeAgent\Data\AgentDefinition;
-use AgentsFullDuplex\RealtimeAgent\Data\AgentSession;
 use AgentsFullDuplex\RealtimeAgent\Data\GoalDefinition;
+use AgentsFullDuplex\RealtimeAgent\Data\StartedAgentSession;
 use AgentsFullDuplex\RealtimeAgent\Data\ToolDefinition;
 use AgentsFullDuplex\RealtimeAgent\Enums\InteractionLevel;
 use AgentsFullDuplex\RealtimeAgent\Policies\AllRequiredGoalsCompleted;
@@ -32,6 +32,9 @@ final class AgentDefinitionBuilder
     private InteractionLevel $interactionLevel = InteractionLevel::Observe;
 
     private bool $allowAgentGoals = false;
+
+    /** @var array<string, string> */
+    private array $stateOwnership = [];
 
     /** @var class-string<FinishPolicyContract> */
     private string $finishPolicy = AllRequiredGoalsCompleted::class;
@@ -103,6 +106,14 @@ final class AgentDefinitionBuilder
         return $this;
     }
 
+    /** @param array<string, string> $ownership */
+    public function stateOwnership(array $ownership): self
+    {
+        $this->stateOwnership = $ownership;
+
+        return $this;
+    }
+
     /** @param class-string<FinishPolicyContract> $policy */
     public function finishWhen(string $policy): self
     {
@@ -124,10 +135,11 @@ final class AgentDefinitionBuilder
             interactionLevel: $this->interactionLevel,
             allowAgentGoals: $this->allowAgentGoals,
             finishPolicy: $this->finishPolicy,
+            stateOwnership: $this->stateOwnership,
         );
     }
 
-    public function startFor(mixed $owner): AgentSession
+    public function startFor(mixed $owner): StartedAgentSession
     {
         return $this->manager->start($this->definition(), $owner);
     }

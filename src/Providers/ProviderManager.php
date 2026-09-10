@@ -13,8 +13,7 @@ final readonly class ProviderManager
     public function __construct(
         private Container $container,
         private Config $config,
-    ) {
-    }
+    ) {}
 
     public function driver(string $name): RealtimeProviderContract
     {

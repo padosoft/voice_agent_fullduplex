@@ -14,7 +14,7 @@ final class JsonSchemaValidatorTest extends TestCase
     {
         $this->expectException(ToolCallRejected::class);
 
-        (new JsonSchemaValidator())->validate([
+        (new JsonSchemaValidator)->validate([
             'type' => 'object',
             'properties' => ['goal_id' => ['type' => 'string']],
             'required' => ['goal_id'],

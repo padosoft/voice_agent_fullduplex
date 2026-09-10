@@ -11,9 +11,11 @@ use AgentsFullDuplex\RealtimeAgent\Contracts\ToolHandlerContract;
 use AgentsFullDuplex\RealtimeAgent\Data\AgentSession;
 use AgentsFullDuplex\RealtimeAgent\Data\ToolCall;
 use AgentsFullDuplex\RealtimeAgent\Data\ToolResult;
-use AgentsFullDuplex\RealtimeAgent\Exceptions\ToolCallRejected;
+use AgentsFullDuplex\RealtimeAgent\Enums\ToolTarget;
 use AgentsFullDuplex\RealtimeAgent\Events\AgentToolCalled;
 use AgentsFullDuplex\RealtimeAgent\Events\AgentToolFailed;
+use AgentsFullDuplex\RealtimeAgent\Exceptions\ToolCallRejected;
+use Illuminate\Cache\RateLimiter;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 use Throwable;
@@ -24,14 +26,24 @@ final class ToolBroker implements ToolBrokerContract
         private readonly Container $container,
         private readonly ToolRegistry $registry,
         private readonly JsonSchemaValidator $validator,
+        private readonly ConfirmationEngine $confirmations,
         private readonly EventStoreContract $events,
         private readonly ToolCallStoreContract $calls,
         private readonly Dispatcher $dispatcher,
-    ) {
-    }
+        private readonly RateLimiter $limiter,
+    ) {}
 
     public function execute(AgentSession $session, ToolCall $call): ToolResult
     {
+        $rateKey = 'realtime-agent:tool:'.hash('sha256', $session->id.':'.$call->name);
+        $limit = (int) config('realtime-agent.security.max_tool_calls_per_minute', 120);
+
+        if ($this->limiter->tooManyAttempts($rateKey, $limit)) {
+            throw new ToolCallRejected("Tool {$call->name} exceeded its session rate limit.");
+        }
+
+        $this->limiter->hit($rateKey, 60);
+
         if ($completed = $this->calls->completed($session->id, $call->idempotencyKey)) {
             return $completed;
         }
@@ -43,8 +55,8 @@ final class ToolBroker implements ToolBrokerContract
         $this->validator->validate($definition->schema(), $call->arguments);
         $this->authorize($definition->authorizer(), $session, $call);
 
-        if ($definition->confirmationPolicy() !== 'never') {
-            throw new ToolCallRejected("Tool {$call->name} requires confirmation before execution.");
+        if ($definition->confirmationPolicy() !== 'never' && ! $call->confirmed) {
+            return $this->confirmations->request($session, $call);
         }
 
         if (! $this->calls->begin($session->id, $call)) {
@@ -77,7 +89,7 @@ final class ToolBroker implements ToolBrokerContract
 
             $result = new ToolResult(
                 callId: $call->id,
-                status: 'completed',
+                status: $definition->targetType() === ToolTarget::Ui ? 'awaiting_client' : 'completed',
                 output: $output,
                 error: null,
                 stateRevision: $session->state()->revision(),

@@ -21,8 +21,7 @@ final readonly class FinishSession implements ToolContract, ToolHandlerContract
     public function __construct(
         private StateEngine $states,
         private Container $container,
-    ) {
-    }
+    ) {}
 
     public function definition(): ToolDefinition
     {

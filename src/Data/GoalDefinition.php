@@ -35,6 +35,20 @@ final class GoalDefinition implements JsonSerializable
         return new self($id);
     }
 
+    /** @param array<string, mixed> $data */
+    public static function fromArray(array $data): self
+    {
+        $goal = new self((string) $data['id']);
+        $goal->label = (string) ($data['label'] ?? $data['id']);
+        $goal->description = isset($data['description']) ? (string) $data['description'] : null;
+        $goal->required = (bool) ($data['required'] ?? false);
+        $goal->status = GoalStatus::from((string) ($data['status'] ?? GoalStatus::Pending->value));
+        $goal->source = (string) ($data['source'] ?? 'application');
+        $goal->completion = array_replace($goal->completion, (array) ($data['completion'] ?? []));
+
+        return $goal;
+    }
+
     public function label(string $label): self
     {
         $this->label = $label;

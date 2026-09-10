@@ -4,18 +4,23 @@ declare(strict_types=1);
 
 namespace AgentsFullDuplex\RealtimeAgent;
 
+use AgentsFullDuplex\RealtimeAgent\Console\DoctorCommand;
+use AgentsFullDuplex\RealtimeAgent\Console\InstallCommand;
 use AgentsFullDuplex\RealtimeAgent\Contracts\EventStoreContract;
 use AgentsFullDuplex\RealtimeAgent\Contracts\StateStoreContract;
 use AgentsFullDuplex\RealtimeAgent\Contracts\ToolBrokerContract;
 use AgentsFullDuplex\RealtimeAgent\Contracts\ToolCallStoreContract;
 use AgentsFullDuplex\RealtimeAgent\Engine\AgentSessionManager;
+use AgentsFullDuplex\RealtimeAgent\Engine\ConfirmationEngine;
 use AgentsFullDuplex\RealtimeAgent\Engine\ToolBroker;
+use AgentsFullDuplex\RealtimeAgent\Engine\UiCommandSigner;
 use AgentsFullDuplex\RealtimeAgent\State\ArrayEventStore;
 use AgentsFullDuplex\RealtimeAgent\State\ArrayStateStore;
+use AgentsFullDuplex\RealtimeAgent\State\ArrayToolCallStore;
 use AgentsFullDuplex\RealtimeAgent\State\DatabaseEventStore;
 use AgentsFullDuplex\RealtimeAgent\State\DatabaseStateStore;
-use AgentsFullDuplex\RealtimeAgent\State\ArrayToolCallStore;
 use AgentsFullDuplex\RealtimeAgent\State\DatabaseToolCallStore;
+use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 
 final class RealtimeAgentServiceProvider extends ServiceProvider
@@ -52,20 +57,41 @@ final class RealtimeAgentServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(ToolBrokerContract::class, ToolBroker::class);
+        $this->app->singleton(UiCommandSigner::class);
+        $this->app->singleton(ConfirmationEngine::class);
         $this->app->singleton(AgentSessionManager::class);
         $this->app->alias(AgentSessionManager::class, 'realtime-agent');
     }
 
     public function boot(): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
-
         $this->publishes([
             __DIR__.'/../config/realtime-agent.php' => config_path('realtime-agent.php'),
         ], 'realtime-agent-config');
 
         $this->publishes([
-            __DIR__.'/../resources/js' => resource_path('js/vendor/realtime-agent'),
+            __DIR__.'/../dist' => public_path('vendor/realtime-agent'),
         ], 'realtime-agent-assets');
+
+        $this->publishes([
+            __DIR__.'/../database/migrations' => database_path('migrations'),
+        ], 'realtime-agent-migrations');
+
+        if ((bool) $this->app['config']->get('realtime-agent.routes.enabled', true)) {
+            $this->registerRoutes();
+        }
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([InstallCommand::class, DoctorCommand::class]);
+        }
+    }
+
+    private function registerRoutes(): void
+    {
+        /** @var Router $router */
+        $router = $this->app->make(Router::class);
+        $router->prefix((string) $this->app['config']->get('realtime-agent.routes.prefix', 'realtime-agent'))
+            ->middleware((array) $this->app['config']->get('realtime-agent.routes.middleware', ['web', 'auth']))
+            ->group(__DIR__.'/../routes/realtime-agent.php');
     }
 }

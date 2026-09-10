@@ -11,9 +11,7 @@ use Illuminate\Contracts\Container\Container;
 
 final readonly class ToolRegistry
 {
-    public function __construct(private Container $container)
-    {
-    }
+    public function __construct(private Container $container) {}
 
     /** @return array<string, ToolDefinition> */
     public function forDefinition(AgentDefinition $definition): array

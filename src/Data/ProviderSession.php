@@ -10,6 +10,5 @@ final readonly class ProviderSession
     public function __construct(
         public ?string $providerSessionId,
         public array $metadata = [],
-    ) {
-    }
+    ) {}
 }

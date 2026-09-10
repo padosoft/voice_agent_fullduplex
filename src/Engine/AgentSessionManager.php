@@ -9,6 +9,7 @@ use AgentsFullDuplex\RealtimeAgent\Contracts\StateStoreContract;
 use AgentsFullDuplex\RealtimeAgent\Contracts\ToolBrokerContract;
 use AgentsFullDuplex\RealtimeAgent\Data\AgentDefinition;
 use AgentsFullDuplex\RealtimeAgent\Data\AgentSession;
+use AgentsFullDuplex\RealtimeAgent\Data\StartedAgentSession;
 use AgentsFullDuplex\RealtimeAgent\Events\AgentSessionStarted;
 use AgentsFullDuplex\RealtimeAgent\Providers\ProviderManager;
 use Illuminate\Contracts\Config\Repository as Config;
@@ -26,8 +27,7 @@ final readonly class AgentSessionManager
         private InitialStateFactory $stateFactory,
         private ProviderManager $providers,
         private Dispatcher $dispatcher,
-    ) {
-    }
+    ) {}
 
     public function make(string $key): AgentDefinitionBuilder
     {
@@ -38,14 +38,14 @@ final readonly class AgentSessionManager
         );
     }
 
-    public function start(AgentDefinition $definition, mixed $owner): AgentSession
+    public function start(AgentDefinition $definition, mixed $owner): StartedAgentSession
     {
         $sessionId = (string) Str::ulid();
         $startedAt = now()->toISOString();
         $state = $this->stateFactory->make($sessionId, $definition, $startedAt);
-        $this->states->create($state, $owner);
+        $this->states->create($state, $owner, $definition);
 
-        $session = new AgentSession(
+        $session = new StartedAgentSession(
             id: $sessionId,
             definition: $definition,
             owner: $owner,
@@ -66,6 +66,22 @@ final readonly class AgentSessionManager
             ['agent' => $definition->key, 'provider' => $definition->provider],
         );
         $this->dispatcher->dispatch(new AgentSessionStarted($session));
+
+        return $session;
+    }
+
+    public function resume(string $sessionId): AgentSession
+    {
+        $definition = $this->states->definition($sessionId);
+        $session = new AgentSession(
+            id: $sessionId,
+            definition: $definition,
+            owner: $this->states->owner($sessionId),
+            states: $this->states,
+            tools: $this->tools,
+        );
+
+        $session->setConnection($this->providers->driver($definition->provider)->clientConnection($session));
 
         return $session;
     }

@@ -17,3 +17,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Ordered, provider-neutral conversation transcripts with voice-to-text continuation on the same session.
 - Versioned usage and cost records, OpenAI token accounting, ElevenLabs post-call reconciliation, and authorized audit exports.
 - Laravel audit events for external ledgers, observability pipelines, and transcript archives.
+- OpenAI GPT-Live WebRTC sessions with Responses delegation, nested tool events, graceful close, and a billed-voice-to-server-Responses text handoff with canonical history rehydration.
+- GPT-Live fragment-preserving transcripts plus separate cumulative voice-duration and Responses-backend token cost records.
+- An installable Codex integration skill, a copy-ready README Handoff for downstream Laravel projects, and a repository rule keeping both synchronized with public package changes.
+- Three anonymous integration case studies covering adaptive learning, connected environments, and revisioned creative workspaces without identifying external products.

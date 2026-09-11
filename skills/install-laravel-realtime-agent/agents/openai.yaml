@@ -1,0 +1,7 @@
+interface:
+  display_name: "Install Laravel Realtime Agent"
+  short_description: "Integrate realtime agents safely in Laravel"
+  default_prompt: "Use $install-laravel-realtime-agent to install and integrate the package in this Laravel application, proving it with the Fake Provider first."
+
+policy:
+  allow_implicit_invocation: true

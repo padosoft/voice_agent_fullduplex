@@ -67,6 +67,59 @@ The install command publishes:
 
 Use `--force` only when you intentionally want to refresh published configuration, migrations, and assets.
 
+## Handoff
+
+This repository ships an installable Codex skill containing the complete integration manual. After requiring the package in a target Laravel application, install or refresh the skill with:
+
+```bash
+realtime_agent_skill_dir="${CODEX_HOME:-$HOME/.codex}/skills/install-laravel-realtime-agent"
+mkdir -p "$realtime_agent_skill_dir"
+cp -R vendor/agents-full-duplex/laravel-realtime-agent/skills/install-laravel-realtime-agent/. "$realtime_agent_skill_dir/"
+```
+
+Open a new Codex task and invoke `$install-laravel-realtime-agent`. During local package development, the source skill is available at `skills/install-laravel-realtime-agent` and can be copied directly from this checkout.
+
+Copy the following prompt into AskMyDoc or any other Laravel project when handing the integration to another agent:
+
+````text
+Integra in questo progetto Laravel il pacchetto `agents-full-duplex/laravel-realtime-agent`.
+
+La sorgente locale del pacchetto è `/Users/marco/packages/agents-full-duplex-ui-bridge`. Se il pacchetto è già disponibile da un repository Composer configurato, usa invece la versione richiesta dal progetto. Prima di modificare qualsiasi file, ispeziona versioni PHP/Laravel/Node, autenticazione, modelli, route, Vite, test, stato Git e dominio Laravel Herd esistente. Il pacchetto richiede PHP 8.2+, Laravel 12–13 e Node 20+.
+
+Se disponibile, usa la skill `$install-laravel-realtime-agent` e leggi integralmente il suo `references/integration-manual.md`. Altrimenti segui queste istruzioni come contratto operativo:
+
+1. Installa da path locale con `composer config repositories.realtime-agent path /Users/marco/packages/agents-full-duplex-ui-bridge` e `composer require agents-full-duplex/laravel-realtime-agent:@dev`, oppure usa il normale `composer require agents-full-duplex/laravel-realtime-agent` se il registry è già configurato. Esegui `php artisan realtime-agent:install`, `php artisan migrate`, `npm install ./vendor/agents-full-duplex/laravel-realtime-agent` e la build frontend del progetto. Non usare `--force` salvo refresh intenzionale.
+2. Parti con `REALTIME_AGENT_PROVIDER=fake`: deve funzionare senza chiavi, costi o chiamate esterne. Non inventare credenziali e non eseguire smoke test live a pagamento senza una richiesta esplicita.
+3. Crea ogni sessione esclusivamente da codice PHP autenticato tramite `RealtimeAgent::make($key)`, dichiarando istruzioni, contesto applicativo limitato ai dati autorizzati, goal, allowlist di tool, Surface, livello di interazione e `startFor($request->user())`. Non creare un endpoint browser generico che accetti istruzioni, tool o owner arbitrari.
+4. Per AskMyDoc, collega la sessione al documento autorizzato e passa solo una rappresentazione testuale sicura e limitata. Usa `Goal::make(...)` per gli obiettivi. Abilita soltanto i tool incorporati necessari (`RuntimeStateGet`, `UpdateWorkingMemory`, `UpdateGoal`, `ExecuteUiAction`, `FinishSession`) e gli eventuali tool applicativi, ciascuno con schema, handler a classe, policy e conferma adeguata.
+5. Passa `$started->connection()` alla view. In Blade aggiungi il meta CSRF e serializza il descriptor come JSON. Nel runtime TypeScript importa `RealtimeAgentClient`, `LaravelControlTransport`, `SurfaceRegistry`, `DomSurfaceAdapter`, `FakeRealtimeDriver`, `OpenAILiveDriver` ed `ElevenLabsRealtimeDriver` da `@agents-full-duplex/realtime-agent-client`; scegli il driver esclusivamente da `descriptor.provider` e connetti da un gesto utente quando serve il microfono.
+6. Registra una Surface semantica con ID stabili e sole azioni ammesse usando `data-agent-id`, `data-agent-label`, `data-agent-actions` oppure `client.surface.register(...)`. Non esporre dump del DOM, HTML, segreti, selector CSS arbitrari o codice eseguibile. `Observe` deve restare senza azioni UI; `Guide` e `Operate` possono usare soltanto azioni semantiche registrate e non sostituiscono policy/conferme.
+7. Mantieni le route di controllo sotto `/realtime-agent` protette da `web` e `auth`. Conserva il controllo di ownership predefinito o configura una Gate ability applicativa in `security.authorization_ability`. Non disabilitare `security.require_authorization` in ambienti usati da utenti.
+8. Rispetta revisioni ottimistiche, validazione schema, idempotenza, rate limit, conferme e token firmati dei comandi UI. Non aggiungere scorciatoie provider-specifiche che aggirino il Tool Broker Laravel.
+9. Supporta i tre provider: Fake per sviluppo/test; OpenAI con GPT-Live WebRTC e chiave soltanto server-side; ElevenLabs con signed URL ottenuto dal backend. Per OpenAI, `switchToText()` chiude il trasporto vocale fatturato e continua a testo tramite Responses conservando sessione, goal e cronologia; `switchToVoice()` reidrata una nuova connessione vocale. `disconnect()` chiude solo il trasporto, mentre `finish()` completa la sessione Laravel.
+10. Mantieni l'audit: messaggi ordinati in `realtime_agent_messages`, utilizzi/costi in `realtime_agent_usage`, tool in `realtime_agent_tool_calls` ed eventi append-only. Esponi l'audit solo all'owner con `client.audit()`, con `GET /realtime-agent/sessions/{session}/audit` o da PHP tramite `AgentSessionManager::resume($id)->audit()`. Usa gli eventi `AgentMessageRecorded` e `AgentUsageRecorded` per ledger/data warehouse. Per ElevenLabs esegui la riconciliazione post-call quando richiesta; distingui sempre costi `estimated` e provider-final.
+11. Configura il provider live solo tramite ambiente. OpenAI usa `OPENAI_API_KEY`, `OPENAI_LIVE_MODEL=gpt-live-1`, `OPENAI_LIVE_BACKEND_MODEL=gpt-5.6-terra`, `OPENAI_LIVE_VOICE=marin`, `OPENAI_LIVE_STORE=false`. ElevenLabs usa `ELEVENLABS_API_KEY` ed `ELEVENLABS_AGENT_ID`. Dopo ogni cambio esegui `php artisan config:clear` e `php artisan realtime-agent:doctor`.
+12. Usa il dominio Laravel Herd già associato alla cartella del progetto, con schema esistente e HTTPS per il microfono; non avviare `php artisan serve`. Verifica almeno doctor, stato migrazioni, build frontend, test applicativi, connessione Fake, testo in/out, sincronizzazione Surface, audit, rifiuto dell'accesso da un altro utente e differenza tra disconnect e finish.
+
+Adatta nomi di controller, modelli, campi, route e componenti alle convenzioni già presenti senza inventare API del dominio. Preserva le modifiche preesistenti non correlate. Alla fine elenca file modificati, provider scelto, punto di creazione della sessione, Surface/tool/policy configurati, percorso dell'audit e risultati esatti dei test; dichiara esplicitamente quali prove live non sono state eseguite.
+````
+
+The repository-level `AGENTS.md` requires this Handoff and the bundled skill to be updated whenever installation, public APIs, provider behavior, security, audit, or verification changes.
+
+### Anonymous case studies
+
+The bundled skill contains three reusable, fictionalized patterns in [case-studies.md](skills/install-laravel-realtime-agent/references/case-studies.md). They are not references to, documentation for, or compatibility claims about any external product:
+
+- **Adaptive-learning session** — ordered goals, retrieval and quiz tools, React chat, transcript projection, and billing limits.
+- **Connected-environment controller** — authorization, revisioned device commands, confirmations, presentation-only Surface actions, and operational audit.
+- **Revisioned creative workspace** — method objectives, card-based UI, dual revision checks, conversation projection, and broadcast patches.
+
+When a target resembles one of these anonymous patterns, append this sentence to the generic prompt above:
+
+```text
+Il progetto target assomiglia al caso studio adaptive-learning/connected-environment/revisioned-creative-workspace: usa la sezione corrispondente di `skills/install-laravel-realtime-agent/references/case-studies.md`, tratta tutti i nomi come segnaposto e implementa prima il percorso Fake senza rimuovere il flusso esistente finché transcript, tool, autorizzazione e audit non hanno copertura equivalente.
+```
+
 ## Create a session
 
 Sessions are created by trusted application code, never by a generic browser endpoint:
@@ -161,7 +214,7 @@ Programmatic registration is available through `client.surface.register(...)`. T
 
 ## Continue the same session in text
 
-Switching channel does not finish the Laravel session or discard provider context. The client disables microphone input, requests text output where the provider supports it, and persists both sides as canonical messages:
+Switching channel does not finish the Laravel session or discard its canonical context. With OpenAI, `switchToText()` gracefully closes the billed GPT-Live voice session and subsequent messages use the configured Responses backend through Laravel. Both sides remain canonical messages in the same session:
 
 ```ts
 await client.switchToText();
@@ -171,9 +224,9 @@ const audit = await client.audit();
 console.log(audit.messages);
 ```
 
-Call `switchToVoice()` to re-enable voice on the same connection. Call `disconnect()` only when the provider connection should close; call `finish()` when the canonical Laravel session itself is complete.
+Call `switchToVoice()` to create a fresh GPT-Live WebRTC connection seeded with the saved conversation, while retaining the same Laravel session and goals. Other providers may switch modality on their existing transport. Call `disconnect()` when provider transport should stop; call `finish()` when the canonical Laravel session itself is complete.
 
-Every finalized turn has a per-session sequence, role, input/output direction, text/audio modality, provider event ID, status, timestamp, and metadata. Streaming deltas remain available to the UI but are not written as thousands of partial database rows.
+Every persisted conversation row has a per-session sequence, role, input/output direction, text/audio modality, provider event ID, status, timestamp, and metadata. GPT-Live exposes transcript fragments rather than authoritative turns: the runtime groups nearby fragments into revisable rows, keeps user and assistant timelines independent, and preserves every original `delta`, `start_ms`, and `end_ms` inside message metadata. This avoids thousands of partial database rows without discarding the source evidence.
 
 ![A semantic Surface exposing approved components and excluding executable input](docs/readme/surface.png)
 
@@ -237,7 +290,9 @@ GET /realtime-agent/sessions/{session}/audit
 
 `audit.totals` separates `estimated`, provider-confirmed `final`, and `effective` totals. `effective` prefers a final provider amount when one exists; `unpriced_records` makes unsupported units visible instead of silently valuing them at zero.
 
-Realtime OpenAI response usage is captured from `response.done`; input-transcription usage and text are captured separately from `conversation.item.input_audio_transcription.completed`. The package calculates an estimate from a configurable, versioned price catalog and stores the exact catalog snapshot beside each record. Current behavior follows the official [OpenAI Realtime cost guide](https://developers.openai.com/api/docs/guides/realtime-costs) and [GPT Realtime model pricing](https://developers.openai.com/api/docs/models/gpt-realtime).
+GPT-Live voice usage arrives as cumulative `session.usage.updated` snapshots. The package updates one duration record per provider session instead of summing those snapshots, then captures the last value from `session.closed`. Responses-backend token usage is recorded separately from nested `response.completed` events. The catalog currently prices `gpt-live-1` by second and `gpt-5.6-terra` by input, cached-input, and output tokens; each record keeps the exact rate-card snapshot used for its estimate. This follows the official [GPT-Live cost guide](https://developers.openai.com/api/docs/guides/voice-latency-cost?api=live), [GPT-Live pricing](https://developers.openai.com/api/docs/models/gpt-live-1), and [GPT-5.6 Terra pricing](https://developers.openai.com/api/docs/models/gpt-5.6-terra).
+
+OpenAI includes WebRTC initialization in the reported duration: the initial 15 seconds are credited against running time and must not be added a second time. Backend tools and models remain separate cost lines, so an auditor can distinguish conversation time from task execution.
 
 ElevenLabs sends final user/agent text over the live socket. After a call is processed, reconcile it to import missed turns and the provider-reported `cost_fiat`:
 
@@ -270,20 +325,31 @@ OpenAI browser-originated usage remains explicitly `estimated`, because WebRTC s
 
 `fake` is the default. It performs no external HTTP calls and exposes deterministic provider events for unit, feature, and browser tests.
 
-### OpenAI Realtime
+### OpenAI GPT-Live
 
 Set these only when deliberately testing the live adapter:
 
 ```dotenv
 REALTIME_AGENT_PROVIDER=openai
 OPENAI_API_KEY=...
-OPENAI_REALTIME_MODEL=gpt-realtime
-OPENAI_REALTIME_VOICE=marin
+OPENAI_LIVE_MODEL=gpt-live-1
+OPENAI_LIVE_BACKEND_MODEL=gpt-5.6-terra
+OPENAI_LIVE_VOICE=marin
+OPENAI_LIVE_STORE=false
 ```
 
-Laravel forwards the SDP offer to OpenAI while audio and provider events flow over browser WebRTC. Function calls are normalized through the Tool Broker, and long sessions renegotiate while retaining the Laravel session state. See the official [OpenAI Realtime WebRTC guide](https://developers.openai.com/api/docs/guides/realtime-webrtc).
+After adding the key locally, verify the resolved configuration without contacting OpenAI:
 
-Input transcription is enabled by default with `gpt-4o-mini-transcribe` and can be changed with `OPENAI_REALTIME_TRANSCRIPTION_MODEL`.
+```bash
+php artisan config:clear
+php artisan realtime-agent:doctor
+```
+
+Laravel sends the browser SDP offer to `POST /v1/live/sessions`; the standard API key never leaves the server. Audio uses WebRTC while the `oai-events` data channel carries Live events. The package waits for `session.started`, uses Responses delegation for `gpt-5.6-terra`, reads function calls from nested `response.output_item.done`, and returns authorized results with `response.item.create` followed by `response.create`. Application tools still pass through the Laravel Tool Broker.
+
+Typed values can be supplied during a voice call through Live Responses delegation. A full `switchToText()` closes the Live transport first, preventing silent voice-duration billing, then routes written messages and authorized tool results to `/v1/responses` through Laravel. Switching back to voice creates a new Live transport from canonical history. Surface changes use bounded `session.thinking.append` context, and every voice close waits for `session.closed` before releasing WebRTC so the final transcript and duration events can drain.
+
+When a browser establishes a new provider connection for an existing Laravel session, recent canonical user/assistant messages are supplied as GPT-Live startup history. `OPENAI_LIVE_STORE` is off by default to minimize provider-side recording; enable it only when your data policy permits stored recordings and future provider-side forks. See the official [GPT-Live WebRTC guide](https://developers.openai.com/api/docs/guides/voice-webrtc?api=live), [session guide](https://developers.openai.com/api/docs/guides/live-conversations), and [delegation guide](https://developers.openai.com/api/docs/guides/live-delegation).
 
 ### ElevenLabs
 
@@ -295,7 +361,7 @@ ELEVENLABS_AGENT_ID=...
 
 Laravel returns a signed WebSocket URL. Canonical tool schemas are materialized as ElevenLabs client tools and cached by schema hash in `realtime_agent_provider_tools`. Surface updates use contextual updates, and client tool calls always return through Laravel. See the official [signed URL](https://elevenlabs.io/docs/eleven-agents/api-reference/conversations/get-signed-url) and [client event](https://elevenlabs.io/docs/eleven-agents/customization/events/client-to-server-events) references.
 
-No live provider test runs in the standard suite or in CI.
+No live provider test runs in the standard suite or in CI. GPT-Live has no free-tier access; the default Fake Provider and all OpenAI HTTP/WebRTC contract tests need no credential.
 
 ## Test the package itself
 

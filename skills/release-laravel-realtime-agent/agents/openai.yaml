@@ -1,0 +1,4 @@
+interface:
+  display_name: "Release Laravel Realtime Agent"
+  short_description: "Review and tag a safe local package release"
+  default_prompt: "Use $release-laravel-realtime-agent to review this package and create a verified local release commit and annotated tag."

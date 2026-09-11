@@ -21,6 +21,8 @@ Integrate the package into an existing Laravel application without weakening the
 9. Preserve transcript, tool-call, and usage/cost auditing. If the application exports accounting or observability data, consume the package's Laravel audit events instead of coupling to OpenAI or ElevenLabs payloads.
 10. Run the target application's relevant tests plus `php artisan realtime-agent:doctor`. Report what was verified and clearly separate Fake Provider validation from opt-in live-provider testing.
 
+If the integration also changes this package's source, run its complete upstream gate: `composer check`, `npm run check`, `npm run test:e2e`, and both bundled skill validators. `npm run check` includes the repository's README visual validator.
+
 ## Provider boundary
 
 - `fake`: default for development and automated tests; no keys and no external calls.

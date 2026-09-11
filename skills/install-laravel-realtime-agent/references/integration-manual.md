@@ -339,6 +339,8 @@ With `REALTIME_AGENT_PROVIDER=fake`, verify through the application's authentica
 
 Live provider smoke tests are separate and opt-in. Do not claim they passed based only on HTTP fakes or the doctor command.
 
+If the work also changes the package source, run `composer check`, `npm run check`, `npm run test:e2e`, and the validators for both bundled skills from the package root. The upstream `npm run check` gate includes schema synchronization, TypeScript build/tests, and README visual validation.
+
 ## 11. Handoff report
 
 When finished, report:

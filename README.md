@@ -79,6 +79,16 @@ cp -R vendor/agents-full-duplex/laravel-realtime-agent/skills/install-laravel-re
 
 Open a new Codex task and invoke `$install-laravel-realtime-agent`. During local package development, the source skill is available at `skills/install-laravel-realtime-agent` and can be copied directly from this checkout.
 
+Package maintainers can also install the release-review skill:
+
+```bash
+realtime_agent_release_skill_dir="${CODEX_HOME:-$HOME/.codex}/skills/release-laravel-realtime-agent"
+mkdir -p "$realtime_agent_release_skill_dir"
+cp -R skills/release-laravel-realtime-agent/. "$realtime_agent_release_skill_dir/"
+```
+
+Invoke `$release-laravel-realtime-agent` to audit a candidate, run the complete offline-safe gate, prepare SemVer and changelog metadata, create the atomic local release commit, and add an annotated `v<version>` tag. The skill never pushes, publishes, or runs paid provider tests without a separate explicit request.
+
 Copy the following prompt into AskMyDoc or any other Laravel project when handing the integration to another agent:
 
 ````text
@@ -99,7 +109,7 @@ Se disponibile, usa la skill `$install-laravel-realtime-agent` e leggi integralm
 9. Supporta i tre provider: Fake per sviluppo/test; OpenAI con GPT-Live WebRTC e chiave soltanto server-side; ElevenLabs con signed URL ottenuto dal backend. Per OpenAI, `switchToText()` chiude il trasporto vocale fatturato e continua a testo tramite Responses conservando sessione, goal e cronologia; `switchToVoice()` reidrata una nuova connessione vocale. `disconnect()` chiude solo il trasporto, mentre `finish()` completa la sessione Laravel.
 10. Mantieni l'audit: messaggi ordinati in `realtime_agent_messages`, utilizzi/costi in `realtime_agent_usage`, tool in `realtime_agent_tool_calls` ed eventi append-only. Esponi l'audit solo all'owner con `client.audit()`, con `GET /realtime-agent/sessions/{session}/audit` o da PHP tramite `AgentSessionManager::resume($id)->audit()`. Usa gli eventi `AgentMessageRecorded` e `AgentUsageRecorded` per ledger/data warehouse. Per ElevenLabs esegui la riconciliazione post-call quando richiesta; distingui sempre costi `estimated` e provider-final.
 11. Configura il provider live solo tramite ambiente. OpenAI usa `OPENAI_API_KEY`, `OPENAI_LIVE_MODEL=gpt-live-1`, `OPENAI_LIVE_BACKEND_MODEL=gpt-5.6-terra`, `OPENAI_LIVE_VOICE=marin`, `OPENAI_LIVE_STORE=false`. ElevenLabs usa `ELEVENLABS_API_KEY` ed `ELEVENLABS_AGENT_ID`. Dopo ogni cambio esegui `php artisan config:clear` e `php artisan realtime-agent:doctor`.
-12. Usa il dominio Laravel Herd già associato alla cartella del progetto, con schema esistente e HTTPS per il microfono; non avviare `php artisan serve`. Verifica almeno doctor, stato migrazioni, build frontend, test applicativi, connessione Fake, testo in/out, sincronizzazione Surface, audit, rifiuto dell'accesso da un altro utente e differenza tra disconnect e finish.
+12. Usa il dominio Laravel Herd già associato alla cartella del progetto, con schema esistente e HTTPS per il microfono; non avviare `php artisan serve`. Verifica almeno doctor, stato migrazioni, build frontend, test applicativi, connessione Fake, testo in/out, sincronizzazione Surface, audit, rifiuto dell'accesso da un altro utente e differenza tra disconnect e finish. Se modifichi anche la sorgente del pacchetto, esegui inoltre `composer check`, `npm run check`, `npm run test:e2e` e i validatori delle skill prima di consegnare.
 
 Adatta nomi di controller, modelli, campi, route e componenti alle convenzioni già presenti senza inventare API del dominio. Preserva le modifiche preesistenti non correlate. Alla fine elenca file modificati, provider scelto, punto di creazione della sessione, Surface/tool/policy configurati, percorso dell'audit e risultati esatti dei test; dichiara esplicitamente quali prove live non sono state eseguite.
 ````
@@ -373,6 +383,7 @@ npm install
 npx playwright install chromium
 
 composer check
+npm run readme:check
 npm run check
 npm run test:e2e
 ```
@@ -382,6 +393,7 @@ The commands cover:
 - PHPUnit and Orchestra Testbench for state revisions, database persistence, goals, ownership, authorization boundaries, confirmations, signed UI commands, ordered transcripts, provider cost normalization/reconciliation, and idempotency;
 - Pint and Larastan for PHP style and static analysis;
 - TypeScript build, JSON Schema synchronization, Vitest, and jsdom for Surfaces and the command executor;
+- the README validator for local image existence, raster integrity and size, SVG accessibility metadata, alt text, and the required Handoff section;
 - Playwright for the full Fake Provider scenario: three goals, three UI updates, voice-to-text continuation, then a completed session.
 
 ![The deterministic Fake Provider completing three goals in the browser test](docs/readme/testing.png)

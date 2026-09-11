@@ -22,7 +22,8 @@
     "test:e2e": "playwright test",
     "demo": "tsx examples/browser-demo.ts",
     "schema:check": "node scripts/check-schema-sync.mjs",
-    "check": "npm run build && npm run schema:check && npm test"
+    "readme:check": "node scripts/validate-readme.mjs",
+    "check": "npm run build && npm run schema:check && npm run readme:check && npm test"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",

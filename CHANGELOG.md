@@ -21,3 +21,5 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - GPT-Live fragment-preserving transcripts plus separate cumulative voice-duration and Responses-backend token cost records.
 - An installable Codex integration skill, a copy-ready README Handoff for downstream Laravel projects, and a repository rule keeping both synchronized with public package changes.
 - Three anonymous integration case studies covering adaptive learning, connected environments, and revisioned creative workspaces without identifying external products.
+- An installable release skill that performs a blocking review, verifies the offline-safe package gate, prepares SemVer metadata, and creates an annotated local tag without pushing or publishing.
+- A deterministic README visual validator, included in `npm run check`, for local asset integrity, dimensions, accessibility metadata, alt text, and Handoff presence.

@@ -112,6 +112,58 @@ final class SessionAuditTest extends TestCase
         self::assertSame('unpriced', $unknown['status']);
     }
 
+    public function test_openai_live_cost_estimate_separates_voice_duration_and_backend_tokens(): void
+    {
+        $calculator = $this->app->make(UsageCostCalculator::class);
+        $voice = $calculator->estimate('openai', 'gpt-live-1', [
+            'duration_seconds' => 90,
+        ]);
+        $backend = $calculator->estimate('openai', 'gpt-5.6-terra', [
+            'input_text_tokens' => 1_000_000,
+            'cached_input_text_tokens' => 250_000,
+            'output_text_tokens' => 100_000,
+        ]);
+
+        self::assertSame('0.07500000', $voice['amount']);
+        self::assertSame('gpt-live-1', $voice['pricing']['model']);
+        self::assertSame('2.75000000', $backend['amount']);
+        self::assertSame('gpt-5.6-terra', $backend['pricing']['model']);
+    }
+
+    public function test_openai_live_cumulative_duration_snapshots_replace_instead_of_sum(): void
+    {
+        $session = $this->app->make(AgentSessionManager::class)
+            ->make('audit.openai-live')
+            ->provider('openai')
+            ->startFor(null);
+        $usage = [
+            'provider' => 'openai',
+            'idempotency_key' => 'openai-live-duration:live_123',
+            'kind' => 'duration',
+            'model' => 'gpt-live-1',
+            'raw' => ['cumulative_snapshot' => true],
+        ];
+
+        $this->postJson("/realtime-agent/sessions/{$session->id}/usage", [
+            ...$usage,
+            'provider_event_id' => 'usage_12',
+            'units' => ['duration_seconds' => 12],
+        ])->assertOk();
+        $this->postJson("/realtime-agent/sessions/{$session->id}/usage", [
+            ...$usage,
+            'provider_event_id' => 'closed_19',
+            'units' => ['duration_seconds' => 19],
+            'raw' => ['cumulative_snapshot' => true, 'final' => true],
+        ])->assertOk();
+
+        $this->getJson("/realtime-agent/sessions/{$session->id}/audit")
+            ->assertOk()
+            ->assertJsonCount(1, 'audit.usage')
+            ->assertJsonPath('audit.usage.0.provider_event_id', 'closed_19')
+            ->assertJsonPath('audit.usage.0.units.duration_seconds', 19)
+            ->assertJsonPath('audit.totals.estimated.USD', '0.01583333');
+    }
+
     public function test_elevenlabs_post_call_reconciliation_imports_missing_turns_and_final_cost(): void
     {
         config()->set('realtime-agent.providers.elevenlabs.api_key', 'test-key');

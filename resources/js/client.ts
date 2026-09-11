@@ -34,6 +34,7 @@ export class RealtimeAgentClient {
   private lastSurface: JsonObject | undefined;
   private providerName: string | null = null;
   private interactionMode: InteractionMode = "voice";
+  private auditQueue: Promise<void> = Promise.resolve();
 
   constructor(
     readonly surfaces: SurfaceRegistry,
@@ -48,13 +49,14 @@ export class RealtimeAgentClient {
     this.sessionId = descriptor.session_id;
     this.providerName = descriptor.provider;
     this.state = descriptor.state;
+    this.auditQueue = Promise.resolve();
     this.executor = new UiCommandExecutor(descriptor.session_id, this.surfaces);
     this.unsubscribeProvider = this.provider.on((event) => {
       this.events.emit(event);
 
       if (event.type === "agent.tool.call") void this.handleToolCall(event.call);
       if (event.type === "agent.transcript.final" || event.type === "agent.usage") {
-        void this.persistProviderEvent(event);
+        this.auditQueue = this.auditQueue.then(() => this.persistProviderEvent(event));
       }
     });
     this.unsubscribeSurface = this.surfaces.onChange(() => this.scheduleSurfaceSync());
@@ -67,6 +69,7 @@ export class RealtimeAgentClient {
     if (this.surfaceTimer) clearTimeout(this.surfaceTimer);
     this.surfaceTimer = null;
     await this.provider.disconnect();
+    await this.auditQueue;
     this.unsubscribeProvider?.();
     this.unsubscribeSurface?.();
     this.unsubscribeProvider = null;
@@ -101,13 +104,15 @@ export class RealtimeAgentClient {
   }
 
   async switchToText(): Promise<void> {
-    this.interactionMode = "text";
     await this.provider.setMode("text");
+    await this.auditQueue;
+    this.interactionMode = "text";
   }
 
   async switchToVoice(): Promise<void> {
-    this.interactionMode = "voice";
     await this.provider.setMode("voice");
+    await this.auditQueue;
+    this.interactionMode = "voice";
   }
 
   async audit(): Promise<SessionAudit> {
@@ -155,6 +160,7 @@ export class RealtimeAgentClient {
 
       if (event.type === "agent.transcript.final") {
         if (!event.text.trim()) return;
+        if (event.metadata?.persisted_server_side === true) return;
 
         await this.control.recordMessage({
           provider: this.providerId(),
@@ -165,7 +171,7 @@ export class RealtimeAgentClient {
           modality: event.modality,
           status: event.status ?? "completed",
           content: event.text,
-          metadata: { interaction_mode: this.interactionMode },
+          metadata: { interaction_mode: this.interactionMode, ...(event.metadata ?? {}) },
         });
       }
     } catch (error) {
@@ -259,5 +265,5 @@ export { DomSurfaceAdapter } from "./surface/dom-adapter.js";
 export { semanticDiff } from "./surface/diff.js";
 export { UiCommandExecutor } from "./surface/command-executor.js";
 export { FakeRealtimeDriver } from "./providers/fake.js";
-export { OpenAIRealtimeDriver } from "./providers/openai.js";
 export { ElevenLabsRealtimeDriver } from "./providers/elevenlabs.js";
+export { OpenAILiveDriver, OpenAIRealtimeDriver } from "./providers/openai.js";

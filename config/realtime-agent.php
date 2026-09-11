@@ -16,9 +16,15 @@ return [
         'openai' => [
             'driver' => OpenAIRealtimeProvider::class,
             'api_key' => env('OPENAI_API_KEY'),
-            'model' => env('OPENAI_REALTIME_MODEL', 'gpt-realtime'),
-            'voice' => env('OPENAI_REALTIME_VOICE', 'marin'),
-            'transcription_model' => env('OPENAI_REALTIME_TRANSCRIPTION_MODEL', 'gpt-4o-mini-transcribe'),
+            'model' => env('OPENAI_LIVE_MODEL', 'gpt-live-1'),
+            'backend_model' => env('OPENAI_LIVE_BACKEND_MODEL', 'gpt-5.6-terra'),
+            'voice' => env('OPENAI_LIVE_VOICE', 'marin'),
+            'store' => env('OPENAI_LIVE_STORE', false),
+            'history_max_messages' => 64,
+            'history_max_characters' => 24_000,
+            'context_max_characters' => 1_600,
+            'transcript_gap_ms' => 1_200,
+            'close_timeout_ms' => 3_000,
             'base_url' => env('OPENAI_BASE_URL', 'https://api.openai.com/v1'),
             'timeout' => 30,
         ],
@@ -65,12 +71,32 @@ return [
                 ],
             ],
             'openai' => [
-                'version' => 'openai-2026-09-10',
-                'default_model' => 'gpt-realtime',
+                'version' => 'openai-2026-09-11',
+                'default_model' => 'gpt-live-1',
                 'aliases' => [
                     'gpt-realtime-2025-08-28' => 'gpt-realtime',
                 ],
                 'models' => [
+                    'gpt-live-1' => [
+                        'currency' => 'USD',
+                        'unit_size' => 60,
+                        'rates' => [
+                            'duration_seconds' => 0.05,
+                        ],
+                        'effective_at' => '2026-09-10',
+                        'source' => 'https://developers.openai.com/api/docs/models/gpt-live-1',
+                    ],
+                    'gpt-5.6-terra' => [
+                        'currency' => 'USD',
+                        'unit_size' => 1_000_000,
+                        'rates' => [
+                            'input_text_tokens' => 2.00,
+                            'cached_input_text_tokens' => 0.20,
+                            'output_text_tokens' => 12.00,
+                        ],
+                        'effective_at' => '2026-09-11',
+                        'source' => 'https://developers.openai.com/api/docs/models/gpt-5.6-terra',
+                    ],
                     'gpt-realtime' => [
                         'currency' => 'USD',
                         'unit_size' => 1_000_000,

@@ -141,6 +141,7 @@ export type CanonicalProviderEvent = {
     text: string;
     messageId?: string;
     modality?: "text" | "audio";
+    metadata?: JsonObject;
 } | {
     type: "agent.transcript.final";
     role: "agent" | "user";
@@ -148,6 +149,7 @@ export type CanonicalProviderEvent = {
     messageId: string;
     modality: "text" | "audio";
     status?: "completed" | "corrected" | "interrupted";
+    metadata?: JsonObject;
 } | {
     type: "agent.usage";
     usage: ProviderUsageInput;

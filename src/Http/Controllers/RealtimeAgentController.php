@@ -18,6 +18,7 @@ use AgentsFullDuplex\RealtimeAgent\Exceptions\RevisionConflict;
 use AgentsFullDuplex\RealtimeAgent\Exceptions\ToolCallRejected;
 use AgentsFullDuplex\RealtimeAgent\Http\PayloadGuard;
 use AgentsFullDuplex\RealtimeAgent\Http\SessionAuthorizer;
+use AgentsFullDuplex\RealtimeAgent\Providers\OpenAI\OpenAIRealtimeProvider;
 use AgentsFullDuplex\RealtimeAgent\Providers\ProviderManager;
 use Closure;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -76,6 +77,37 @@ final readonly class RealtimeAgentController
         return $this->run($request, $session, fn (AgentSession $agent): array => [
             'audit' => $this->audits->forSession($agent)->jsonSerialize(),
         ]);
+    }
+
+    public function text(Request $request, string $session): JsonResponse
+    {
+        $this->payloads->enforceSize($request->getContent());
+        $validated = $request->validate([
+            'type' => ['required', 'in:message,tool_result'],
+            'message' => ['required_if:type,message', 'nullable', 'string', 'max:'.config('realtime-agent.audit.max_message_characters', 65_535)],
+            'tool_result' => ['required_if:type,tool_result', 'nullable', 'array'],
+            'tool_result.call_id' => ['required_if:type,tool_result', 'string', 'max:128'],
+            'tool_result.status' => ['required_if:type,tool_result', 'string', 'max:64'],
+            'tool_result.output' => ['nullable', 'array'],
+            'tool_result.error' => ['nullable', 'array'],
+            'tool_result.state_revision' => ['required_if:type,tool_result', 'integer', 'min:1'],
+        ]);
+
+        return $this->run($request, $session, function (AgentSession $agent) use ($validated): array {
+            $provider = $this->providers->driver($agent->definition->provider);
+
+            if (! $provider instanceof OpenAIRealtimeProvider) {
+                throw new \LogicException('Server-side text continuation is available only for OpenAI GPT-Live sessions.');
+            }
+
+            return [
+                'response' => $provider->respondText(
+                    session: $agent,
+                    message: $validated['type'] === 'message' ? (string) $validated['message'] : null,
+                    toolResult: $validated['type'] === 'tool_result' ? (array) $validated['tool_result'] : null,
+                ),
+            ];
+        });
     }
 
     public function reconcileAudit(Request $request, string $session): JsonResponse

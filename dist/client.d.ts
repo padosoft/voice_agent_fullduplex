@@ -20,6 +20,7 @@ export declare class RealtimeAgentClient {
     private lastSurface;
     private providerName;
     private interactionMode;
+    private auditQueue;
     constructor(surfaces: SurfaceRegistry, provider: RealtimeProviderDriver, control: ControlTransport, options?: RealtimeAgentClientOptions);
     connect(descriptor: ConnectionDescriptor): Promise<void>;
     disconnect(): Promise<void>;
@@ -50,5 +51,5 @@ export { DomSurfaceAdapter } from "./surface/dom-adapter.js";
 export { semanticDiff } from "./surface/diff.js";
 export { UiCommandExecutor } from "./surface/command-executor.js";
 export { FakeRealtimeDriver } from "./providers/fake.js";
-export { OpenAIRealtimeDriver } from "./providers/openai.js";
 export { ElevenLabsRealtimeDriver } from "./providers/elevenlabs.js";
+export { OpenAILiveDriver, OpenAIRealtimeDriver } from "./providers/openai.js";

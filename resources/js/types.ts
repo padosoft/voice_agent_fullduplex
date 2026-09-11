@@ -160,8 +160,8 @@ export type CanonicalProviderEvent =
   | { type: "agent.disconnected" }
   | { type: "agent.mode.changed"; mode: InteractionMode }
   | { type: "agent.provider.session"; providerSessionId: string }
-  | { type: "agent.transcript.delta"; role: "agent" | "user"; text: string; messageId?: string; modality?: "text" | "audio" }
-  | { type: "agent.transcript.final"; role: "agent" | "user"; text: string; messageId: string; modality: "text" | "audio"; status?: "completed" | "corrected" | "interrupted" }
+  | { type: "agent.transcript.delta"; role: "agent" | "user"; text: string; messageId?: string; modality?: "text" | "audio"; metadata?: JsonObject }
+  | { type: "agent.transcript.final"; role: "agent" | "user"; text: string; messageId: string; modality: "text" | "audio"; status?: "completed" | "corrected" | "interrupted"; metadata?: JsonObject }
   | { type: "agent.usage"; usage: ProviderUsageInput }
   | { type: "agent.audio.delta"; audio: string }
   | { type: "agent.tool.call"; call: ToolCallInput }

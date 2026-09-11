@@ -26,9 +26,13 @@ final class DoctorCommand extends Command
         $failed = false;
 
         if ($provider === 'openai') {
-            $checks['OpenAI credentials'] = $this->configured($config, 'openai', ['api_key', 'model']);
+            $status = $this->configured($config, 'openai', ['api_key', 'model', 'backend_model']);
+            $checks['OpenAI GPT-Live'] = $status;
+            $failed = $status !== 'configured';
         } elseif ($provider === 'elevenlabs') {
-            $checks['ElevenLabs credentials'] = $this->configured($config, 'elevenlabs', ['api_key', 'agent_id']);
+            $status = $this->configured($config, 'elevenlabs', ['api_key', 'agent_id']);
+            $checks['ElevenLabs credentials'] = $status;
+            $failed = $status !== 'configured';
         } else {
             $checks['Fake provider'] = 'ready (no credentials required)';
         }

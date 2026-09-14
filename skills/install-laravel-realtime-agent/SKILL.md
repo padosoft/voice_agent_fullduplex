@@ -12,7 +12,7 @@ Integrate the package into an existing Laravel application without weakening the
 1. Inspect the target repository before editing: Laravel/PHP/Node versions, authentication, models, routes, frontend entrypoints, Vite configuration, tests, dirty git state, and Herd URL.
 2. Read [references/integration-manual.md](references/integration-manual.md) completely before changing the target application. Treat it as the package-specific source of truth.
    - When the target resembles an adaptive-learning platform, a connected-environment controller, or a revisioned creative workspace, also read only the matching anonymous section of [references/case-studies.md](references/case-studies.md). Treat every class and identifier there as illustrative.
-3. Resolve whether the package comes from a Composer registry or a local path. Never invent a path or credential. For Marco's local checkout, the known source is `/Users/marco/packages/agents-full-duplex-ui-bridge`.
+3. Install the stable `0.1` line from the Composer registry by default. Use a local path only when the target must consume unreleased source changes. Never invent a path or credential; Marco's known local checkout is `/Users/marco/packages/agents-full-duplex-ui-bridge`.
 4. Install and prove the integration with the Fake Provider first. It is deterministic, free, and requires no provider credentials.
 5. Create sessions only in authenticated application PHP code with `RealtimeAgent::make(...)->startFor($user)`. Do not add a generic browser session-creation endpoint.
 6. Expose only a semantic Surface made of registered IDs, state, and allowed actions. Never expose raw HTML, arbitrary selectors, scripts, secrets, or an unrestricted DOM snapshot.

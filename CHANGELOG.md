@@ -6,20 +6,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-14
+
 ### Added
 
-- Laravel 12–13 package discovery, configurable authenticated control routes, install and doctor commands.
-- Versioned state, event, goal, tool, Surface, confirmation, and signed UI-command protocols.
-- Transactional database state, append-only events, optimistic revisions, idempotent tool audit, and durable ElevenLabs tool IDs.
-- Framework-neutral TypeScript client with DOM Surface adapter, semantic diffing, UI command execution, and reconnection support.
-- Deterministic Fake Provider plus OpenAI WebRTC and ElevenLabs WebSocket adapters.
-- PHPUnit, Vitest, and Playwright coverage with provider HTTP fakes.
-- Ordered, provider-neutral conversation transcripts with voice-to-text continuation on the same session.
-- Versioned usage and cost records, OpenAI token accounting, ElevenLabs post-call reconciliation, and authorized audit exports.
-- Laravel audit events for external ledgers, observability pipelines, and transcript archives.
-- OpenAI GPT-Live WebRTC sessions with Responses delegation, nested tool events, graceful close, and a billed-voice-to-server-Responses text handoff with canonical history rehydration.
-- GPT-Live fragment-preserving transcripts plus separate cumulative voice-duration and Responses-backend token cost records.
-- An installable Codex integration skill, a copy-ready README Handoff for downstream Laravel projects, and a repository rule keeping both synchronized with public package changes.
-- Three anonymous integration case studies covering adaptive learning, connected environments, and revisioned creative workspaces without identifying external products.
-- An installable release skill that performs a blocking review, verifies the offline-safe package gate, prepares SemVer metadata, and creates an annotated local tag without pushing or publishing.
-- A deterministic README visual validator, included in `npm run check`, for local asset integrity, dimensions, accessibility metadata, alt text, and Handoff presence.
+- A Laravel 12–13 package with automatic discovery, configurable authenticated control routes, timestamp-safe migration publishing, install and doctor commands, and a database-backed state store.
+- Immutable, versioned contracts for sessions, state, events, goals, tools, confirmations, semantic Surfaces, signed UI commands, ordered messages, usage, and cost records.
+- Transactional state mutations with optimistic revisions, append-only events, idempotent tool execution, finish policies, confirmation workflows, and durable provider tool identifiers.
+- A provider-neutral TypeScript client with semantic Surface registration, DOM scanning, diff/debounce synchronization, signed UI-command execution, reconnection, and voice/text modality switching.
+- A deterministic, zero-cost Fake Provider for development and automated testing.
+- OpenAI GPT-Live WebRTC support with server-side credential handling, Responses delegation, nested tool calls, fragment-preserving transcripts, graceful voice shutdown, canonical history rehydration, and text continuation on the same Laravel session.
+- ElevenLabs signed WebSocket support with contextual Surface updates, client tool brokerage, durable schema-mapped tool IDs, transcript import, and authenticated post-call cost reconciliation.
+- Provider-neutral audit APIs and Laravel events for transcripts, tool lifecycle, estimated usage, provider-final costs, accounting ledgers, observability systems, and data warehouses.
+- PHPUnit/Testbench, Larastan, Pint, Vitest/jsdom, schema synchronization, README validation, clean package-archive checks, and Playwright coverage, including the complete three-goal Fake Provider flow.
+- Installable Codex skills for downstream integration and verified local releases, with a copy-ready Handoff and anonymous reusable integration patterns.
+
+### Security
+
+- Session ownership and optional Laravel Gate authorization are enforced independently of route middleware.
+- Provider input, tool arguments, Surface snapshots, revisions, payload sizes, idempotency keys, confirmations, and UI-command expiry/signatures are validated by Laravel.
+- Provider credentials stay server-side; arbitrary selectors, HTML, scripts, unregistered UI actions, and browser-supplied monetary amounts are rejected.
+- Sensitive tool arguments are redacted from durable audit records by default.
+
+[Unreleased]: https://github.com/padosoft/voice_agent_fullduplex/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/padosoft/voice_agent_fullduplex/releases/tag/v0.1.0

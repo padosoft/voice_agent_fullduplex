@@ -26,6 +26,7 @@ Read the actual diff and source, not only the changelog. Report findings by seve
 - a public PHP/TypeScript/provider/security/audit change not synchronized with the README Handoff and bundled integration skill as required by `AGENTS.md`;
 - identifying private products, repositories, paths, remotes, or proprietary class names in anonymous case studies;
 - source and tracked `dist` output disagreeing after a clean TypeScript build;
+- Composer or npm package previews containing dependency directories, caches, credentials, environment files, or missing runtime/schema/install assets;
 - incomplete `[Unreleased]` notes, incompatible dependency constraints, or version/tag collisions;
 - a high-confidence correctness, authorization, audit, migration, provider-normalization, or backwards-compatibility defect.
 
@@ -52,12 +53,15 @@ composer check
 npm run readme:check
 npm run check
 npm run test:e2e
+npm pack --dry-run --json
+release_archive_dir="$(mktemp -d)"
+composer archive --format=zip --dir="$release_archive_dir"
 skill_validator="${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py"
 python3 "$skill_validator" skills/install-laravel-realtime-agent
 python3 "$skill_validator" skills/release-laravel-realtime-agent
 ```
 
-Resolve the validator path from the active `skill-creator` installation if `CODEX_HOME` uses a nonstandard layout. `npm run readme:check` is also included by `npm run check`; execute it explicitly so a visual-documentation failure is easy to identify. If a required validator or its runtime dependency is missing, record that as a release blocker instead of silently skipping it. Never substitute a live provider smoke test for the deterministic suite.
+Resolve the validator path from the active `skill-creator` installation if `CODEX_HOME` uses a nonstandard layout. Create the Composer preview in a fresh temporary directory, inspect both package manifests, and confirm that runtime `dist`, schemas, migrations, configuration, and bundled skills are present while local dependencies and caches are absent. Use a task-specific npm cache if the user's global cache is not writable. `npm run readme:check` is also included by `npm run check`; execute it explicitly so a visual-documentation failure is easy to identify. If a required validator or its runtime dependency is missing, record that as a release blocker instead of silently skipping it. Never substitute a live provider smoke test for the deterministic suite.
 
 After the build and checks, inspect `git diff --check`, `git status`, the complete staged diff, and the candidate file list. A dirty tree is acceptable only while preparing the intended release commit; it must be clean after the commit.
 

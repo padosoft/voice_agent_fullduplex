@@ -3,6 +3,11 @@
     "description": "Provider-neutral Laravel core and browser bridge for full-duplex realtime agents.",
     "type": "library",
     "license": "MIT",
+    "homepage": "https://github.com/padosoft/voice_agent_fullduplex",
+    "support": {
+        "issues": "https://github.com/padosoft/voice_agent_fullduplex/issues",
+        "source": "https://github.com/padosoft/voice_agent_fullduplex"
+    },
     "keywords": [
         "laravel",
         "realtime",
@@ -52,6 +57,9 @@
         "demo": "php examples/lesson.php"
     },
     "extra": {
+        "branch-alias": {
+            "dev-main": "0.1.x-dev"
+        },
         "laravel": {
             "providers": [
                 "AgentsFullDuplex\\RealtimeAgent\\RealtimeAgentServiceProvider"
@@ -66,6 +74,20 @@
         "allow-plugins": {
             "php-http/discovery": true
         }
+    },
+    "archive": {
+        "exclude": [
+            "/.DS_Store",
+            "/.git*",
+            "/.phpstan.cache",
+            "/.phpunit.cache",
+            "/composer.lock",
+            "/node_modules",
+            "/npm-debug.log*",
+            "/playwright-report",
+            "/test-results",
+            "/vendor"
+        ]
     },
     "minimum-stability": "stable",
     "prefer-stable": true

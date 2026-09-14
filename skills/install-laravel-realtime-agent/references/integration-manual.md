@@ -12,10 +12,10 @@ The realtime provider owns the low-latency audio transport. Laravel remains auth
 
 ### Composer registry
 
-When the package is available from the application's configured Composer repositories:
+For the stable `0.1` release line:
 
 ```bash
-composer require agents-full-duplex/laravel-realtime-agent
+composer require agents-full-duplex/laravel-realtime-agent:^0.1
 php artisan realtime-agent:install
 php artisan migrate
 npm install ./vendor/agents-full-duplex/laravel-realtime-agent
@@ -24,7 +24,7 @@ npm run build
 
 ### Local path repository
 
-For Marco's current local checkout:
+Use Marco's local checkout only when the target must test package changes that have not been released:
 
 ```bash
 composer config repositories.realtime-agent path /Users/marco/packages/agents-full-duplex-ui-bridge

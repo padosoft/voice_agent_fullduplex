@@ -37,11 +37,21 @@ This package separates the two concerns:
 
 ## Install in a Laravel application
 
-For the current local checkout:
+Install the stable `0.1` line from Packagist:
 
 ```bash
 laravel new realtime-agent-demo
 cd realtime-agent-demo
+composer require agents-full-duplex/laravel-realtime-agent:^0.1
+php artisan realtime-agent:install
+php artisan migrate
+npm install ./vendor/agents-full-duplex/laravel-realtime-agent
+npm run build
+```
+
+When developing against this local checkout instead of a tagged release:
+
+```bash
 composer config repositories.realtime-agent path /Users/marco/packages/agents-full-duplex-ui-bridge
 composer require agents-full-duplex/laravel-realtime-agent:@dev
 php artisan realtime-agent:install
@@ -94,11 +104,11 @@ Copy the following prompt into AskMyDoc or any other Laravel project when handin
 ````text
 Integra in questo progetto Laravel il pacchetto `agents-full-duplex/laravel-realtime-agent`.
 
-La sorgente locale del pacchetto è `/Users/marco/packages/agents-full-duplex-ui-bridge`. Se il pacchetto è già disponibile da un repository Composer configurato, usa invece la versione richiesta dal progetto. Prima di modificare qualsiasi file, ispeziona versioni PHP/Laravel/Node, autenticazione, modelli, route, Vite, test, stato Git e dominio Laravel Herd esistente. Il pacchetto richiede PHP 8.2+, Laravel 12–13 e Node 20+.
+La release stabile del pacchetto è installabile come `agents-full-duplex/laravel-realtime-agent:^0.1`. La sorgente locale di sviluppo è `/Users/marco/packages/agents-full-duplex-ui-bridge`: usala soltanto quando il progetto deve provare modifiche non ancora rilasciate. Prima di modificare qualsiasi file, ispeziona versioni PHP/Laravel/Node, autenticazione, modelli, route, Vite, test, stato Git e dominio Laravel Herd esistente. Il pacchetto richiede PHP 8.2+, Laravel 12–13 e Node 20+.
 
 Se disponibile, usa la skill `$install-laravel-realtime-agent` e leggi integralmente il suo `references/integration-manual.md`. Altrimenti segui queste istruzioni come contratto operativo:
 
-1. Installa da path locale con `composer config repositories.realtime-agent path /Users/marco/packages/agents-full-duplex-ui-bridge` e `composer require agents-full-duplex/laravel-realtime-agent:@dev`, oppure usa il normale `composer require agents-full-duplex/laravel-realtime-agent` se il registry è già configurato. Esegui `php artisan realtime-agent:install`, `php artisan migrate`, `npm install ./vendor/agents-full-duplex/laravel-realtime-agent` e la build frontend del progetto. Non usare `--force` salvo refresh intenzionale.
+1. Per una normale integrazione esegui `composer require agents-full-duplex/laravel-realtime-agent:^0.1`. Usa invece il path repository e `@dev` soltanto per lavorare contro la sorgente locale non rilasciata. Esegui poi `php artisan realtime-agent:install`, `php artisan migrate`, `npm install ./vendor/agents-full-duplex/laravel-realtime-agent` e la build frontend del progetto. Non usare `--force` salvo refresh intenzionale.
 2. Parti con `REALTIME_AGENT_PROVIDER=fake`: deve funzionare senza chiavi, costi o chiamate esterne. Non inventare credenziali e non eseguire smoke test live a pagamento senza una richiesta esplicita.
 3. Crea ogni sessione esclusivamente da codice PHP autenticato tramite `RealtimeAgent::make($key)`, dichiarando istruzioni, contesto applicativo limitato ai dati autorizzati, goal, allowlist di tool, Surface, livello di interazione e `startFor($request->user())`. Non creare un endpoint browser generico che accetti istruzioni, tool o owner arbitrari.
 4. Per AskMyDoc, collega la sessione al documento autorizzato e passa solo una rappresentazione testuale sicura e limitata. Usa `Goal::make(...)` per gli obiettivi. Abilita soltanto i tool incorporati necessari (`RuntimeStateGet`, `UpdateWorkingMemory`, `UpdateGoal`, `ExecuteUiAction`, `FinishSession`) e gli eventuali tool applicativi, ciascuno con schema, handler a classe, policy e conferma adeguata.
@@ -448,4 +458,4 @@ The database is the only durable state store in v0.1. Redis, Reverb, server-side
 
 ## Version scope
 
-This repository currently implements the v0.1 development line. See [CHANGELOG.md](CHANGELOG.md) for changes and [LICENSE.md](LICENSE.md) for licensing.
+The current stable line is `0.1.x`, beginning with `v0.1.0`. See [CHANGELOG.md](CHANGELOG.md) for release notes and [LICENSE.md](LICENSE.md) for licensing.

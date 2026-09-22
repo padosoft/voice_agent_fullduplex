@@ -12,10 +12,10 @@ The realtime provider owns the low-latency audio transport. Laravel remains auth
 
 ### Composer registry
 
-For the stable `0.1` release line:
+For the stable `0.2` release line:
 
 ```bash
-composer require agents-full-duplex/laravel-realtime-agent:^0.1
+composer require agents-full-duplex/laravel-realtime-agent:^0.2
 php artisan realtime-agent:install
 php artisan migrate
 npm install ./vendor/agents-full-duplex/laravel-realtime-agent
@@ -66,6 +66,30 @@ ELEVENLABS_API_KEY=
 ELEVENLABS_AGENT_ID=
 ```
 
+Gemini Live through the Gemini Developer API:
+
+```dotenv
+REALTIME_AGENT_PROVIDER=gemini
+GEMINI_API_KEY=
+GEMINI_LIVE_MODEL=gemini-3.8-live
+GEMINI_LIVE_VOICE=Puck
+GEMINI_LIVE_TOKEN_TTL_SECONDS=1800
+GEMINI_LIVE_NEW_SESSION_TTL_SECONDS=60
+GEMINI_LIVE_CONTEXT_COMPRESSION_TRIGGER_TOKENS=25000
+GEMINI_LIVE_CONTEXT_COMPRESSION_WINDOW_TOKENS=8000
+```
+
+xAI Grok Voice:
+
+```dotenv
+REALTIME_AGENT_PROVIDER=xai
+XAI_API_KEY=
+XAI_VOICE_MODEL=grok-voice-latest
+XAI_VOICE=eve
+XAI_VOICE_VAD=server_vad
+XAI_VOICE_CLIENT_SECRET_TTL_SECONDS=300
+```
+
 After changing environment values:
 
 ```bash
@@ -73,9 +97,9 @@ php artisan config:clear
 php artisan realtime-agent:doctor
 ```
 
-Never send API keys to Blade, JavaScript, a Surface snapshot, or a client connection descriptor. OpenAI's key is used server-side to exchange the browser SDP offer. ElevenLabs receives a short-lived signed URL from Laravel.
+Never send permanent API keys to Blade, JavaScript, a Surface snapshot, or a client connection descriptor. OpenAI's key is used server-side to exchange the browser SDP offer. ElevenLabs receives a short-lived signed URL from Laravel. Gemini and xAI descriptors contain a short-lived client credential, so serialize them only into the authenticated page that immediately connects, and never log, cache, store, or pass them to another user.
 
-The provider can also be selected for one definition with `->provider('fake')`, `->provider('openai')`, or `->provider('elevenlabs')`. The provider stored in the session definition is authoritative.
+The provider can also be selected for one definition with `->provider('fake')`, `->provider('openai')`, `->provider('elevenlabs')`, `->provider('gemini')`, or `->provider('xai')`. The provider stored in the session definition is authoritative.
 
 ## 4. Create the session in application code
 
@@ -191,12 +215,14 @@ import {
   DomSurfaceAdapter,
   ElevenLabsRealtimeDriver,
   FakeRealtimeDriver,
+  GeminiLiveDriver,
   LaravelControlTransport,
   OpenAILiveDriver,
   RealtimeAgentClient,
   SurfaceRegistry,
   type ConnectionDescriptor,
   type RealtimeProviderDriver,
+  XaiVoiceDriver,
 } from '@agents-full-duplex/realtime-agent-client';
 
 const element = document.querySelector<HTMLScriptElement>('#agent-connection');
@@ -214,6 +240,8 @@ const providers: Record<string, () => RealtimeProviderDriver> = {
   fake: () => new FakeRealtimeDriver(),
   openai: () => new OpenAILiveDriver(),
   elevenlabs: () => new ElevenLabsRealtimeDriver(),
+  gemini: () => new GeminiLiveDriver(),
+  xai: () => new XaiVoiceDriver(),
 };
 
 const makeProvider = providers[descriptor.provider];
@@ -263,7 +291,7 @@ The public client exposes:
 - `finish()`: completes the Laravel session using the current revision;
 - `on(listener)`: observes normalized connection, transcript, usage, tool, state, confirmation, Surface, and error events.
 
-OpenAI supports the voice-to-text continuation described above. ElevenLabs can receive written messages on its current WebSocket, but the server-side `/text` continuation endpoint is OpenAI-specific. The Fake Provider provides deterministic text responses and events for development.
+OpenAI supports the voice-to-text continuation described above. ElevenLabs, Gemini and xAI can receive written messages on their current transport, but the server-side `/text` continuation endpoint is OpenAI-specific. In Gemini/xAI text mode, the browser mutes voice I/O while finalized output transcript remains available. Gemini resumes a provider session when possible; xAI reconnects with a fresh client secret and bounded canonical text history. The Fake Provider provides deterministic text responses and events for development.
 
 ## 8. Tools and authorization
 
@@ -314,6 +342,8 @@ The authenticated owner can call `GET /realtime-agent/sessions/{session}/audit`,
 
 OpenAI WebRTC cost observed by the browser is marked `estimated`; Responses token usage is a separate cost line. A trusted backend can record a provider-final cost. For ElevenLabs, call `POST /realtime-agent/sessions/{session}/audit/reconcile` after processing finishes; Laravel imports missed turns and provider-reported `cost_fiat` using the stored conversation ID.
 
+Gemini emits `usageMetadata`; the package normalizes input/output text and audio token counts and prices them with the captured Gemini rate card. Native-audio context is compounded across turns, so leave the default context compression enabled unless the application's cost policy intentionally differs. xAI meters browser PCM input/output in cumulative rows and records direct text messages as separate units. Both are estimates, not provider-final invoices. Provider-native search, MCP, and built-in action tools remain disabled: only the PHP-declared custom functions traverse the Tool Broker.
+
 Calling `disconnect()` ends transport only. Because transcript and state are durable, the application can later resume the Laravel session or continue it textually. Calling `finish()` marks the canonical session complete.
 
 ## 10. Verify the integration
@@ -338,6 +368,8 @@ With `REALTIME_AGENT_PROVIDER=fake`, verify through the application's authentica
 7. disconnecting does not finish the session, while finishing does.
 
 Live provider smoke tests are separate and opt-in. Do not claim they passed based only on HTTP fakes or the doctor command.
+
+For Gemini and xAI, once an authorized local key is available, run one manual browser session per provider over HTTPS: connect with the microphone, speak one turn, verify final user/assistant transcript, invoke one declared tool, inspect `client.audit()` for a provider-specific estimated usage row, then disconnect and finish. Keep keys local and out of CI.
 
 If the work also changes the package source, run `composer check`, `npm run check`, `npm run test:e2e`, and the validators for both bundled skills from the package root. The upstream `npm run check` gate includes schema synchronization, TypeScript build/tests, and README visual validation.
 

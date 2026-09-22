@@ -18,6 +18,7 @@ export class RealtimeAgentClient {
     providerName = null;
     interactionMode = "voice";
     auditQueue = Promise.resolve();
+    toolQueue = Promise.resolve();
     constructor(surfaces, provider, control, options = {}) {
         this.surfaces = surfaces;
         this.provider = provider;
@@ -30,11 +31,16 @@ export class RealtimeAgentClient {
         this.providerName = descriptor.provider;
         this.state = descriptor.state;
         this.auditQueue = Promise.resolve();
+        this.toolQueue = Promise.resolve();
         this.executor = new UiCommandExecutor(descriptor.session_id, this.surfaces);
         this.unsubscribeProvider = this.provider.on((event) => {
             this.events.emit(event);
-            if (event.type === "agent.tool.call")
-                void this.handleToolCall(event.call);
+            if (event.type === "agent.tool.call") {
+                // Provider function calls may arrive in one WebSocket frame. Laravel
+                // state revisions and confirmations are sequential by contract, so do
+                // not begin the next call until the preceding result is returned.
+                this.toolQueue = this.toolQueue.then(() => this.handleToolCall(event.call));
+            }
             if (event.type === "agent.transcript.final" || event.type === "agent.usage") {
                 this.auditQueue = this.auditQueue.then(() => this.persistProviderEvent(event));
             }
@@ -48,6 +54,7 @@ export class RealtimeAgentClient {
         if (this.surfaceTimer)
             clearTimeout(this.surfaceTimer);
         this.surfaceTimer = null;
+        await this.toolQueue;
         await this.provider.disconnect();
         await this.auditQueue;
         this.unsubscribeProvider?.();
@@ -222,4 +229,6 @@ export { semanticDiff } from "./surface/diff.js";
 export { UiCommandExecutor } from "./surface/command-executor.js";
 export { FakeRealtimeDriver } from "./providers/fake.js";
 export { ElevenLabsRealtimeDriver } from "./providers/elevenlabs.js";
+export { GeminiLiveDriver } from "./providers/gemini.js";
 export { OpenAILiveDriver, OpenAIRealtimeDriver } from "./providers/openai.js";
+export { XaiVoiceDriver } from "./providers/xai.js";

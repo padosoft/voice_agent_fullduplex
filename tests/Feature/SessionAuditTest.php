@@ -90,6 +90,20 @@ final class SessionAuditTest extends TestCase
             ->assertJsonPath('error.code', 'invalid_audit_payload');
     }
 
+    public function test_xai_voice_costs_keep_audio_minutes_and_text_messages_distinct(): void
+    {
+        $estimate = $this->app->make(UsageCostCalculator::class)->estimate('xai', 'grok-voice-latest', [
+            'input_audio_seconds' => 60,
+            'output_audio_seconds' => 30,
+            'text_input_messages' => 2,
+        ]);
+
+        self::assertSame('0.12800000', $estimate['amount']);
+        self::assertSame('estimated', $estimate['status']);
+        self::assertSame(60, $estimate['pricing']['unit_sizes']['input_audio_seconds']);
+        self::assertSame(1, $estimate['pricing']['unit_sizes']['text_input_messages']);
+    }
+
     public function test_openai_cost_estimate_uses_modal_rates_and_cached_input_discount(): void
     {
         $estimate = $this->app->make(UsageCostCalculator::class)->estimate('openai', 'gpt-realtime', [

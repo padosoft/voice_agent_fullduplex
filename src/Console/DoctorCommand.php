@@ -33,6 +33,14 @@ final class DoctorCommand extends Command
             $status = $this->configured($config, 'elevenlabs', ['api_key', 'agent_id']);
             $checks['ElevenLabs credentials'] = $status;
             $failed = $status !== 'configured';
+        } elseif ($provider === 'gemini') {
+            $status = $this->configured($config, 'gemini', ['api_key', 'model']);
+            $checks['Gemini Live credentials'] = $status;
+            $failed = $status !== 'configured';
+        } elseif ($provider === 'xai') {
+            $status = $this->configured($config, 'xai', ['api_key', 'model']);
+            $checks['xAI Grok Voice credentials'] = $status;
+            $failed = $status !== 'configured';
         } else {
             $checks['Fake provider'] = 'ready (no credentials required)';
         }

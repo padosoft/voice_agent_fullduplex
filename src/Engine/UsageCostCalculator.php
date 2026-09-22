@@ -36,6 +36,7 @@ final readonly class UsageCostCalculator
         $price = (array) $models[$matchedModel];
         $rates = (array) ($price['rates'] ?? []);
         $unitSize = max(1, (int) ($price['unit_size'] ?? 1_000_000));
+        $unitSizes = (array) ($price['unit_sizes'] ?? []);
         $billable = $units;
 
         foreach (['text', 'audio', 'image'] as $modality) {
@@ -47,7 +48,8 @@ final readonly class UsageCostCalculator
         $amount = 0.0;
 
         foreach ($rates as $unit => $rate) {
-            $amount += ((float) ($billable[$unit] ?? 0) / $unitSize) * (float) $rate;
+            $rateUnitSize = max(1, (int) ($unitSizes[$unit] ?? $unitSize));
+            $amount += ((float) ($billable[$unit] ?? 0) / $rateUnitSize) * (float) $rate;
         }
 
         return [
@@ -61,6 +63,7 @@ final readonly class UsageCostCalculator
                 'effective_at' => $price['effective_at'] ?? null,
                 'source' => $price['source'] ?? null,
                 'unit_size' => $unitSize,
+                'unit_sizes' => $unitSizes,
                 'rates' => $rates,
             ],
         ];

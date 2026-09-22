@@ -293,4 +293,75 @@ final class ProviderBootstrapTest extends TestCase
         self::assertSame(1, ProviderToolRecord::query()->count());
         Http::assertSentCount(2);
     }
+
+    public function test_gemini_live_uses_a_constrained_ephemeral_token_and_never_persists_it(): void
+    {
+        config()->set('realtime-agent.providers.gemini.api_key', 'gemini-test-key');
+        Http::fake([
+            '*/auth_tokens' => Http::response(['name' => 'gemini-ephemeral-token'], 200),
+        ]);
+        $session = $this->app->make(AgentSessionManager::class)
+            ->make('provider.gemini')
+            ->provider('gemini')
+            ->instructions('Teach safely.')
+            ->tools([RuntimeStateGet::class])
+            ->startFor(null);
+
+        $this->postJson("/realtime-agent/sessions/{$session->id}/connect")
+            ->assertOk()
+            ->assertJsonPath('provider', 'gemini')
+            ->assertJsonPath('connection.api_variant', 'gemini-live')
+            ->assertJsonPath('connection.access_token', 'gemini-ephemeral-token')
+            ->assertJsonPath('connection.tool_name_map.runtime_state_get', 'runtime.state.get');
+
+        Http::assertSent(static fn (Request $request): bool => $request->url() === 'https://generativelanguage.googleapis.com/v1beta/auth_tokens'
+            && $request->hasHeader('x-goog-api-key', 'gemini-test-key')
+            && data_get($request->data(), 'uses') === 1
+            && data_get($request->data(), 'liveConnectConstraints.model') === 'models/gemini-3.8-live'
+            && data_get($request->data(), 'liveConnectConstraints.config.responseModalities') === ['AUDIO']
+            && data_get($request->data(), 'liveConnectConstraints.config.inputAudioTranscription') === []
+            && data_get($request->data(), 'liveConnectConstraints.config.tools.0.functionDeclarations.0.name') === 'runtime_state_get'
+            && data_get($request->data(), 'liveConnectConstraints.config.tools.0.functionDeclarations.0.behavior') === 'BLOCKING'
+        );
+        self::assertStringNotContainsString(
+            'gemini-ephemeral-token',
+            json_encode($this->app->make(EventStoreContract::class)->forSession($session->id), JSON_THROW_ON_ERROR),
+        );
+    }
+
+    public function test_xai_voice_uses_a_short_lived_browser_secret_and_custom_functions_only(): void
+    {
+        config()->set('realtime-agent.providers.xai.api_key', 'xai-test-key');
+        config()->set('realtime-agent.providers.xai.vad', 'server_vad');
+        Http::fake([
+            '*/realtime/client_secrets' => Http::response([
+                'value' => 'xai-ephemeral-secret',
+                'expires_at' => 1_789_999_999,
+            ], 200),
+        ]);
+        $session = $this->app->make(AgentSessionManager::class)
+            ->make('provider.xai')
+            ->provider('xai')
+            ->instructions('Teach safely.')
+            ->tools([RuntimeStateGet::class])
+            ->startFor(null);
+
+        $this->postJson("/realtime-agent/sessions/{$session->id}/connect")
+            ->assertOk()
+            ->assertJsonPath('provider', 'xai')
+            ->assertJsonPath('connection.api_variant', 'xai-voice')
+            ->assertJsonPath('connection.client_secret', 'xai-ephemeral-secret')
+            ->assertJsonPath('connection.session.tools.0.type', 'function')
+            ->assertJsonPath('connection.session.tools.0.name', 'runtime_state_get')
+            ->assertJsonPath('connection.session.turn_detection.type', 'server_vad');
+
+        Http::assertSent(static fn (Request $request): bool => $request->url() === 'https://api.x.ai/v1/realtime/client_secrets'
+            && $request->hasHeader('Authorization', 'Bearer xai-test-key')
+            && data_get($request->data(), 'expires_after.seconds') === 300
+        );
+        self::assertStringNotContainsString(
+            'xai-ephemeral-secret',
+            json_encode($this->app->make(EventStoreContract::class)->forSession($session->id), JSON_THROW_ON_ERROR),
+        );
+    }
 }

@@ -30,7 +30,7 @@ Read the actual diff and source, not only the changelog. Report findings by seve
 - incomplete `[Unreleased]` notes, incompatible dependency constraints, or version/tag collisions;
 - a high-confidence correctness, authorization, audit, migration, provider-normalization, or backwards-compatibility defect.
 
-Review provider paths without spending money: Fake must remain the standard executable path, OpenAI GPT-Live and ElevenLabs must be covered by contract/faked HTTP tests, credentials must remain server-side, and live smoke tests remain opt-in.
+Review provider paths without spending money: Fake must remain the standard executable path; OpenAI, ElevenLabs, Gemini Live, and xAI/Grok Voice must have contract or faked HTTP/WebSocket coverage; permanent credentials must remain server-side; browser-issued ephemeral credentials must not be logged or persisted; and live smoke tests remain opt-in.
 
 ## Prepare the release
 
@@ -92,5 +92,5 @@ Lead with either `release ready` or `release blocked`. Include:
 - version, tag, branch, and release commit hash;
 - review findings, or explicitly state that no release-blocking findings remain;
 - exact commands passed and any checks not run;
-- provider-live tests intentionally not run;
+- provider-live tests intentionally not run, or explicit evidence for each separately authorized live smoke test;
 - confirmation that the tag exists only locally and nothing was pushed or published.

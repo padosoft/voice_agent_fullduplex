@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use AgentsFullDuplex\RealtimeAgent\Providers\ElevenLabs\ElevenLabsProvider;
 use AgentsFullDuplex\RealtimeAgent\Providers\Fake\FakeRealtimeProvider;
+use AgentsFullDuplex\RealtimeAgent\Providers\Gemini\GeminiLiveProvider;
 use AgentsFullDuplex\RealtimeAgent\Providers\OpenAI\OpenAIRealtimeProvider;
+use AgentsFullDuplex\RealtimeAgent\Providers\Xai\XaiVoiceProvider;
 
 return [
     'default' => env('REALTIME_AGENT_PROVIDER', 'fake'),
@@ -34,6 +36,35 @@ return [
             'agent_id' => env('ELEVENLABS_AGENT_ID'),
             'base_url' => env('ELEVENLABS_BASE_URL', 'https://api.elevenlabs.io/v1'),
             'cost_currency' => env('ELEVENLABS_COST_CURRENCY', 'USD'),
+            'timeout' => 30,
+        ],
+        'gemini' => [
+            'driver' => GeminiLiveProvider::class,
+            'api_key' => env('GEMINI_API_KEY'),
+            'model' => env('GEMINI_LIVE_MODEL', 'gemini-3.8-live'),
+            'voice' => env('GEMINI_LIVE_VOICE', 'Puck'),
+            'base_url' => env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta'),
+            'token_ttl_seconds' => (int) env('GEMINI_LIVE_TOKEN_TTL_SECONDS', 1_800),
+            'new_session_ttl_seconds' => (int) env('GEMINI_LIVE_NEW_SESSION_TTL_SECONDS', 60),
+            'history_max_messages' => (int) env('GEMINI_LIVE_HISTORY_MAX_MESSAGES', 64),
+            'history_max_characters' => (int) env('GEMINI_LIVE_HISTORY_MAX_CHARACTERS', 24_000),
+            'context_max_characters' => (int) env('GEMINI_LIVE_CONTEXT_MAX_CHARACTERS', 1_600),
+            'context_compression_trigger_tokens' => (int) env('GEMINI_LIVE_CONTEXT_COMPRESSION_TRIGGER_TOKENS', 25_000),
+            'context_compression_sliding_window_tokens' => (int) env('GEMINI_LIVE_CONTEXT_COMPRESSION_WINDOW_TOKENS', 8_000),
+            'timeout' => 30,
+        ],
+        'xai' => [
+            'driver' => XaiVoiceProvider::class,
+            'api_key' => env('XAI_API_KEY'),
+            'model' => env('XAI_VOICE_MODEL', 'grok-voice-latest'),
+            'voice' => env('XAI_VOICE', 'eve'),
+            'reasoning_effort' => env('XAI_VOICE_REASONING_EFFORT', 'none'),
+            'vad' => env('XAI_VOICE_VAD', 'server_vad'),
+            'client_secret_ttl_seconds' => (int) env('XAI_VOICE_CLIENT_SECRET_TTL_SECONDS', 300),
+            'history_max_messages' => (int) env('XAI_VOICE_HISTORY_MAX_MESSAGES', 64),
+            'history_max_characters' => (int) env('XAI_VOICE_HISTORY_MAX_CHARACTERS', 24_000),
+            'context_max_characters' => (int) env('XAI_VOICE_CONTEXT_MAX_CHARACTERS', 1_600),
+            'base_url' => env('XAI_BASE_URL', 'https://api.x.ai/v1'),
             'timeout' => 30,
         ],
     ],
@@ -120,6 +151,49 @@ return [
                             'output_text_tokens' => 5.00,
                         ],
                         'source' => 'https://developers.openai.com/api/docs/models/gpt-4o-mini-transcribe',
+                    ],
+                ],
+            ],
+            'gemini' => [
+                'version' => 'gemini-2026-09-22',
+                'default_model' => 'gemini-3.8-live',
+                'models' => [
+                    'gemini-3.8-live' => [
+                        'currency' => 'USD',
+                        'unit_size' => 1_000_000,
+                        'rates' => [
+                            'input_text_tokens' => 0.75,
+                            'input_audio_tokens' => 3.00,
+                            'output_text_tokens' => 4.50,
+                            'output_audio_tokens' => 12.00,
+                        ],
+                        'effective_at' => '2026-09-22',
+                        'source' => 'https://ai.google.dev/gemini-api/docs/pricing',
+                    ],
+                ],
+            ],
+            'xai' => [
+                'version' => 'xai-2026-09-22',
+                'default_model' => 'grok-voice-latest',
+                'aliases' => [
+                    'grok-voice-think-fast-2.0' => 'grok-voice-latest',
+                ],
+                'models' => [
+                    'grok-voice-latest' => [
+                        'currency' => 'USD',
+                        'unit_size' => 1,
+                        'unit_sizes' => [
+                            'input_audio_seconds' => 60,
+                            'output_audio_seconds' => 60,
+                            'text_input_messages' => 1,
+                        ],
+                        'rates' => [
+                            'input_audio_seconds' => 0.08,
+                            'output_audio_seconds' => 0.08,
+                            'text_input_messages' => 0.004,
+                        ],
+                        'effective_at' => '2026-09-22',
+                        'source' => 'https://docs.x.ai/developers/models/speech-to-speech',
                     ],
                 ],
             ],

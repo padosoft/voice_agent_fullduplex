@@ -30,6 +30,9 @@ final readonly class SessionAuditManager
         'output_audio_tokens',
         'duration_seconds',
         'messages',
+        'input_audio_seconds',
+        'output_audio_seconds',
+        'text_input_messages',
     ];
 
     public function __construct(

@@ -2,7 +2,10 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "tests/e2e",
-  fullyParallel: true,
+  // The static Python server is deliberately minimal and serial; one browser
+  // avoids module-fetch connection resets while retaining a real browser test.
+  fullyParallel: false,
+  workers: 1,
   retries: 0,
   reporter: "list",
   use: {

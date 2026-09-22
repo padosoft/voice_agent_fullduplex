@@ -23,7 +23,7 @@ This package separates the two concerns:
 - the provider carries realtime media and translates vendor events;
 - Laravel owns the canonical snapshot, revision checks, policies, tool broker, goals, ordered transcript, cost audit, and signed UI commands;
 - the browser exposes only a semantic `Surface`, never a raw DOM dump or arbitrary selectors;
-- OpenAI and ElevenLabs IDs remain inside their adapters, outside application code.
+- Provider-specific IDs, ephemeral credentials, and protocol details remain inside their adapters, outside application code.
 
 ![The direct media path and Laravel-controlled state path](docs/readme/architecture.png)
 
@@ -37,12 +37,12 @@ This package separates the two concerns:
 
 ## Install in a Laravel application
 
-Install the stable `0.1` line from Packagist:
+Install the stable `0.2` line from Packagist:
 
 ```bash
 laravel new realtime-agent-demo
 cd realtime-agent-demo
-composer require agents-full-duplex/laravel-realtime-agent:^0.1
+composer require agents-full-duplex/laravel-realtime-agent:^0.2
 php artisan realtime-agent:install
 php artisan migrate
 npm install ./vendor/agents-full-duplex/laravel-realtime-agent
@@ -67,7 +67,7 @@ APP_URL=https://realtime-agent-demo.test
 REALTIME_AGENT_PROVIDER=fake
 ```
 
-Open the project as `realtime-agent-demo.test` with Laravel Herd and enable HTTPS for that site. Do not add OpenAI or ElevenLabs credentials for the standard test path.
+Open the project as `realtime-agent-demo.test` with Laravel Herd and enable HTTPS for that site. Do not add live-provider credentials for the standard Fake Provider test path.
 
 The install command publishes:
 
@@ -104,21 +104,21 @@ Copy the following prompt into AskMyDoc or any other Laravel project when handin
 ````text
 Integra in questo progetto Laravel il pacchetto `agents-full-duplex/laravel-realtime-agent`.
 
-La release stabile del pacchetto è installabile come `agents-full-duplex/laravel-realtime-agent:^0.1`. La sorgente locale di sviluppo è `/Users/marco/packages/agents-full-duplex-ui-bridge`: usala soltanto quando il progetto deve provare modifiche non ancora rilasciate. Prima di modificare qualsiasi file, ispeziona versioni PHP/Laravel/Node, autenticazione, modelli, route, Vite, test, stato Git e dominio Laravel Herd esistente. Il pacchetto richiede PHP 8.2+, Laravel 12–13 e Node 20+.
+La release stabile del pacchetto è installabile come `agents-full-duplex/laravel-realtime-agent:^0.2`. La sorgente locale di sviluppo è `/Users/marco/packages/agents-full-duplex-ui-bridge`: usala soltanto quando il progetto deve provare modifiche non ancora rilasciate. Prima di modificare qualsiasi file, ispeziona versioni PHP/Laravel/Node, autenticazione, modelli, route, Vite, test, stato Git e dominio Laravel Herd esistente. Il pacchetto richiede PHP 8.2+, Laravel 12–13 e Node 20+.
 
 Se disponibile, usa la skill `$install-laravel-realtime-agent` e leggi integralmente il suo `references/integration-manual.md`. Altrimenti segui queste istruzioni come contratto operativo:
 
-1. Per una normale integrazione esegui `composer require agents-full-duplex/laravel-realtime-agent:^0.1`. Usa invece il path repository e `@dev` soltanto per lavorare contro la sorgente locale non rilasciata. Esegui poi `php artisan realtime-agent:install`, `php artisan migrate`, `npm install ./vendor/agents-full-duplex/laravel-realtime-agent` e la build frontend del progetto. Non usare `--force` salvo refresh intenzionale.
+1. Per una normale integrazione esegui `composer require agents-full-duplex/laravel-realtime-agent:^0.2`. Usa invece il path repository e `@dev` soltanto per lavorare contro la sorgente locale non rilasciata. Esegui poi `php artisan realtime-agent:install`, `php artisan migrate`, `npm install ./vendor/agents-full-duplex/laravel-realtime-agent` e la build frontend del progetto. Non usare `--force` salvo refresh intenzionale.
 2. Parti con `REALTIME_AGENT_PROVIDER=fake`: deve funzionare senza chiavi, costi o chiamate esterne. Non inventare credenziali e non eseguire smoke test live a pagamento senza una richiesta esplicita.
 3. Crea ogni sessione esclusivamente da codice PHP autenticato tramite `RealtimeAgent::make($key)`, dichiarando istruzioni, contesto applicativo limitato ai dati autorizzati, goal, allowlist di tool, Surface, livello di interazione e `startFor($request->user())`. Non creare un endpoint browser generico che accetti istruzioni, tool o owner arbitrari.
 4. Per AskMyDoc, collega la sessione al documento autorizzato e passa solo una rappresentazione testuale sicura e limitata. Usa `Goal::make(...)` per gli obiettivi. Abilita soltanto i tool incorporati necessari (`RuntimeStateGet`, `UpdateWorkingMemory`, `UpdateGoal`, `ExecuteUiAction`, `FinishSession`) e gli eventuali tool applicativi, ciascuno con schema, handler a classe, policy e conferma adeguata.
-5. Passa `$started->connection()` alla view. In Blade aggiungi il meta CSRF e serializza il descriptor come JSON. Nel runtime TypeScript importa `RealtimeAgentClient`, `LaravelControlTransport`, `SurfaceRegistry`, `DomSurfaceAdapter`, `FakeRealtimeDriver`, `OpenAILiveDriver` ed `ElevenLabsRealtimeDriver` da `@agents-full-duplex/realtime-agent-client`; scegli il driver esclusivamente da `descriptor.provider` e connetti da un gesto utente quando serve il microfono.
+5. Passa `$started->connection()` alla view. In Blade aggiungi il meta CSRF e serializza il descriptor come JSON. Nel runtime TypeScript importa `RealtimeAgentClient`, `LaravelControlTransport`, `SurfaceRegistry`, `DomSurfaceAdapter`, `FakeRealtimeDriver`, `OpenAILiveDriver`, `ElevenLabsRealtimeDriver`, `GeminiLiveDriver` e `XaiVoiceDriver` da `@agents-full-duplex/realtime-agent-client`; scegli il driver esclusivamente da `descriptor.provider` e connetti da un gesto utente quando serve il microfono. Il descriptor Gemini/xAI contiene una credenziale effimera: non registrarlo o salvarlo.
 6. Registra una Surface semantica con ID stabili e sole azioni ammesse usando `data-agent-id`, `data-agent-label`, `data-agent-actions` oppure `client.surface.register(...)`. Non esporre dump del DOM, HTML, segreti, selector CSS arbitrari o codice eseguibile. `Observe` deve restare senza azioni UI; `Guide` e `Operate` possono usare soltanto azioni semantiche registrate e non sostituiscono policy/conferme.
 7. Mantieni le route di controllo sotto `/realtime-agent` protette da `web` e `auth`. Conserva il controllo di ownership predefinito o configura una Gate ability applicativa in `security.authorization_ability`. Non disabilitare `security.require_authorization` in ambienti usati da utenti.
 8. Rispetta revisioni ottimistiche, validazione schema, idempotenza, rate limit, conferme e token firmati dei comandi UI. Non aggiungere scorciatoie provider-specifiche che aggirino il Tool Broker Laravel.
-9. Supporta i tre provider: Fake per sviluppo/test; OpenAI con GPT-Live WebRTC e chiave soltanto server-side; ElevenLabs con signed URL ottenuto dal backend. Per OpenAI, `switchToText()` chiude il trasporto vocale fatturato e continua a testo tramite Responses conservando sessione, goal e cronologia; `switchToVoice()` reidrata una nuova connessione vocale. `disconnect()` chiude solo il trasporto, mentre `finish()` completa la sessione Laravel.
+9. Supporta cinque provider: Fake per sviluppo/test; OpenAI con GPT-Live WebRTC; ElevenLabs con signed URL; Gemini Live con token effimero vincolato emesso dal backend; xAI/Grok Voice con client secret breve. Per OpenAI, `switchToText()` chiude il trasporto vocale fatturato e continua a testo tramite Responses conservando sessione, goal e cronologia. Gemini e xAI mantengono il proprio WebSocket: in modalità testo il microfono e la riproduzione vengono disattivati, mentre i transcript restano canonici. `disconnect()` chiude solo il trasporto, mentre `finish()` completa la sessione Laravel.
 10. Mantieni l'audit: messaggi ordinati in `realtime_agent_messages`, utilizzi/costi in `realtime_agent_usage`, tool in `realtime_agent_tool_calls` ed eventi append-only. Esponi l'audit solo all'owner con `client.audit()`, con `GET /realtime-agent/sessions/{session}/audit` o da PHP tramite `AgentSessionManager::resume($id)->audit()`. Usa gli eventi `AgentMessageRecorded` e `AgentUsageRecorded` per ledger/data warehouse. Per ElevenLabs esegui la riconciliazione post-call quando richiesta; distingui sempre costi `estimated` e provider-final.
-11. Configura il provider live solo tramite ambiente. OpenAI usa `OPENAI_API_KEY`, `OPENAI_LIVE_MODEL=gpt-live-1`, `OPENAI_LIVE_BACKEND_MODEL=gpt-5.6-terra`, `OPENAI_LIVE_VOICE=marin`, `OPENAI_LIVE_STORE=false`. ElevenLabs usa `ELEVENLABS_API_KEY` ed `ELEVENLABS_AGENT_ID`. Dopo ogni cambio esegui `php artisan config:clear` e `php artisan realtime-agent:doctor`.
+11. Configura il provider live solo tramite ambiente. OpenAI usa `OPENAI_API_KEY`, `OPENAI_LIVE_MODEL=gpt-live-1`, `OPENAI_LIVE_BACKEND_MODEL=gpt-5.6-terra`, `OPENAI_LIVE_VOICE=marin`, `OPENAI_LIVE_STORE=false`. ElevenLabs usa `ELEVENLABS_API_KEY` ed `ELEVENLABS_AGENT_ID`. Gemini usa `GEMINI_API_KEY`, `GEMINI_LIVE_MODEL=gemini-3.8-live`, `GEMINI_LIVE_VOICE=Puck`, i limiti `GEMINI_LIVE_CONTEXT_*` e le durate `GEMINI_LIVE_TOKEN_TTL_SECONDS`/`GEMINI_LIVE_NEW_SESSION_TTL_SECONDS`. xAI usa `XAI_API_KEY`, `XAI_VOICE_MODEL=grok-voice-latest`, `XAI_VOICE=eve`, `XAI_VOICE_VAD=server_vad` e `XAI_VOICE_CLIENT_SECRET_TTL_SECONDS=300`. Dopo ogni cambio esegui `php artisan config:clear` e `php artisan realtime-agent:doctor`.
 12. Usa il dominio Laravel Herd già associato alla cartella del progetto, con schema esistente e HTTPS per il microfono; non avviare `php artisan serve`. Verifica almeno doctor, stato migrazioni, build frontend, test applicativi, connessione Fake, testo in/out, sincronizzazione Surface, audit, rifiuto dell'accesso da un altro utente e differenza tra disconnect e finish. Se modifichi anche la sorgente del pacchetto, esegui inoltre `composer check`, `npm run check`, `npm run test:e2e` e i validatori delle skill prima di consegnare.
 
 Adatta nomi di controller, modelli, campi, route e componenti alle convenzioni già presenti senza inventare API del dominio. Preserva le modifiche preesistenti non correlate. Alla fine elenca file modificati, provider scelto, punto di creazione della sessione, Surface/tool/policy configurati, percorso dell'audit e risultati esatti dei test; dichiara esplicitamente quali prove live non sono state eseguite.
@@ -314,6 +314,8 @@ GPT-Live voice usage arrives as cumulative `session.usage.updated` snapshots. Th
 
 OpenAI includes WebRTC initialization in the reported duration: the initial 15 seconds are credited against running time and must not be added a second time. Backend tools and models remain separate cost lines, so an auditor can distinguish conversation time from task execution.
 
+Gemini Live emits `usageMetadata` throughout the WebSocket lifecycle. The adapter records modality-specific input/output token counts and applies the versioned rate card snapshot. Gemini reprocesses the active native-audio context on later turns, so `contextWindowCompression` is enabled by default to bound growing cost. xAI records cumulative browser PCM duration separately for input and output audio, plus billable text input messages; its rows are estimates until a trusted provider reconciliation source is introduced. See [Gemini Live cost guidance](https://ai.google.dev/gemini-api/docs/live-api/best-practices) and [xAI Speech-to-Speech pricing](https://docs.x.ai/developers/models/speech-to-speech).
+
 ElevenLabs sends final user/agent text over the live socket. After a call is processed, reconcile it to import missed turns and the provider-reported `cost_fiat`:
 
 ```http
@@ -381,7 +383,29 @@ ELEVENLABS_AGENT_ID=...
 
 Laravel returns a signed WebSocket URL. Canonical tool schemas are materialized as ElevenLabs client tools and cached by schema hash in `realtime_agent_provider_tools`. Surface updates use contextual updates, and client tool calls always return through Laravel. See the official [signed URL](https://elevenlabs.io/docs/eleven-agents/api-reference/conversations/get-signed-url) and [client event](https://elevenlabs.io/docs/eleven-agents/customization/events/client-to-server-events) references.
 
-No live provider test runs in the standard suite or in CI. GPT-Live has no free-tier access; the default Fake Provider and all OpenAI HTTP/WebRTC contract tests need no credential.
+No live-provider test runs in the standard suite or CI. The default Fake Provider and all provider HTTP/WebSocket contract tests need no credential.
+
+### Gemini Live
+
+```dotenv
+REALTIME_AGENT_PROVIDER=gemini
+GEMINI_API_KEY=...
+GEMINI_LIVE_MODEL=gemini-3.8-live
+GEMINI_LIVE_VOICE=Puck
+```
+
+Laravel creates a one-use, short-lived Gemini token constrained to the declared model, instructions, audio response, transcript, session-resumption and Laravel-mapped function definitions. The browser connects directly over WebSocket, sends PCM audio at 16 kHz, receives PCM audio at 24 kHz, flushes playback on interruption, and sends tool responses only after Laravel has completed the call. Gemini native search, MCP and other provider-side tools are never enabled by this package. See [Gemini Live WebSocket](https://ai.google.dev/gemini-api/docs/live-api/get-started-websocket) and [ephemeral tokens](https://ai.google.dev/gemini-api/docs/live-api/ephemeral-tokens).
+
+### xAI Grok Voice
+
+```dotenv
+REALTIME_AGENT_PROVIDER=xai
+XAI_API_KEY=...
+XAI_VOICE_MODEL=grok-voice-latest
+XAI_VOICE=eve
+```
+
+Laravel exchanges the permanent key for a five-minute client secret. The browser passes that secret only as the WebSocket subprotocol, configures custom functions generated from the Laravel tool allowlist, meters PCM input/output audio locally, and provisions a new secret plus bounded canonical text history when it reconnects. Do not expose the permanent key or persist a connection descriptor. See [xAI Voice API](https://docs.x.ai/developers/rest-api-reference/inference/voice).
 
 ## Test the package itself
 
@@ -443,7 +467,7 @@ Final transcript ─> ordered messages ─> text continuation / export
 Provider usage ───> rate snapshot ────> estimated or final cost
 ```
 
-The database is the only durable state store in v0.1. Redis, Reverb, server-side sideband connections, and dedicated React/Vue/Livewire adapters are intentionally deferred; the core browser API already works with those frameworks through programmatic Surface registration.
+The database is the only durable state store in v0.2. Redis, Reverb, server-side sideband connections, and dedicated React/Vue/Livewire adapters are intentionally deferred; the core browser API already works with those frameworks through programmatic Surface registration.
 
 ## Security model
 
@@ -452,10 +476,10 @@ The database is the only durable state store in v0.1. Redis, Reverb, server-side
 - Raw CSS selectors, HTML, scripts, and JavaScript fields are rejected from Surface input.
 - Authorization runs at session and tool level.
 - UI commands expire, are signed with `APP_KEY`, and are removed after completion.
-- Provider keys stay on Laravel; they are never serialized into the client descriptor.
+- Permanent provider keys stay on Laravel. Short-lived Gemini/xAI credentials are delivered only in the authenticated connection response and must never be logged, cached, or persisted.
 - Current state is compact; events, finalized messages, usage, and tool calls remain durable for audit and debugging.
 - Browser telemetry cannot set monetary amounts; only configured server pricing or trusted reconciliation can do so.
 
 ## Version scope
 
-The current stable line is `0.1.x`, beginning with `v0.1.0`. See [CHANGELOG.md](CHANGELOG.md) for release notes and [LICENSE.md](LICENSE.md) for licensing.
+The current stable line is `0.2.x`, beginning with `v0.2.0`. See [CHANGELOG.md](CHANGELOG.md) for release notes and [LICENSE.md](LICENSE.md) for licensing.

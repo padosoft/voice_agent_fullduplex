@@ -10,6 +10,7 @@ import type {
   ConversationMessageInput,
   ProviderUsageInput,
   SessionAudit,
+  ToolCallInput,
   UsageRecord,
 } from "../types.js";
 
@@ -69,5 +70,38 @@ describe("text continuation audit", () => {
     expect(usage).toHaveLength(1);
     expect(usage[0]?.model).toBe("fake-realtime");
     expect(await client.audit()).toMatchObject({ schema: "realtime-agent-audit@1" });
+  });
+
+  it("serializes provider tool calls so each result carries the latest revision", async () => {
+    const provider = new FakeRealtimeDriver();
+    const started: string[] = [];
+    const release: Record<string, () => void> = {};
+    const control: ControlTransport = {
+      executeTool: vi.fn((call: ToolCallInput) => new Promise((resolve) => {
+        started.push(call.id);
+        release[call.id] = () => resolve({ call_id: call.id, status: "completed", output: {}, state_revision: started.length + 1 });
+      })),
+      refreshState: vi.fn(async () => state),
+      syncSurface: vi.fn(async () => state),
+      resolveConfirmation: vi.fn(),
+      completeUiCommand: vi.fn(async () => state),
+      finish: vi.fn(async () => state),
+      recordMessage: vi.fn(),
+      recordUsage: vi.fn(),
+      fetchAudit: vi.fn(),
+    };
+    const client = new RealtimeAgentClient(new SurfaceRegistry(), provider, control);
+
+    await client.connect({ session_id: "session-1", provider: "fake", connection: { transport: "fake" }, state });
+    provider.emit({ type: "agent.tool.call", call: { id: "first", name: "runtime.state.get", arguments: {}, base_revision: 1 } });
+    provider.emit({ type: "agent.tool.call", call: { id: "second", name: "runtime.state.get", arguments: {}, base_revision: 1 } });
+
+    await vi.waitFor(() => expect(started).toEqual(["first"]));
+    release.first?.();
+    await vi.waitFor(() => expect(started).toEqual(["first", "second"]));
+    release.second?.();
+    await client.disconnect();
+
+    expect(provider.toolResults.map((result) => result.call_id)).toEqual(["first", "second"]);
   });
 });

@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Realtime Agent provider contracts</title>
+  </head>
+  <body data-gemini="starting" data-xai="starting">
+    <output id="messages">0</output>
+    <output id="usage">0</output>
+    <output id="tools">0</output>
+    <script type="module">
+      import { GeminiLiveDriver, RealtimeAgentClient, SurfaceRegistry, XaiVoiceDriver } from "../dist/client.js";
+
+      class SimulatedSocket extends EventTarget {
+        static all = [];
+        readyState = WebSocket.CONNECTING;
+        sent = [];
+
+        constructor(kind) {
+          super();
+          this.kind = kind;
+          SimulatedSocket.all.push(this);
+          queueMicrotask(() => {
+            this.readyState = WebSocket.OPEN;
+            this.dispatchEvent(new Event("open"));
+          });
+        }
+
+        send(raw) {
+          const event = JSON.parse(raw);
+          this.sent.push(event);
+          if (event.setup) queueMicrotask(() => this.receive({ setupComplete: {} }));
+          if (event.type === "session.update") queueMicrotask(() => this.receive({ type: "session.updated" }));
+        }
+
+        receive(event) {
+          this.dispatchEvent(new MessageEvent("message", { data: JSON.stringify(event) }));
+        }
+
+        close() {
+          this.readyState = WebSocket.CLOSED;
+          this.dispatchEvent(new Event("close"));
+        }
+      }
+
+      class SimulatedAudio {
+        async start(callback) { this.callback = callback; }
+        stop() {}
+        setMuted() {}
+        play() { return 0.25; }
+        flush() {}
+      }
+
+      const state = (id) => ({
+        schema: "realtime-agent-state@1",
+        session: { id, revision: 1, status: "active" },
+        pending: { actions: [], confirmations: [] },
+      });
+      const messages = [];
+      const usage = [];
+      const tools = [];
+      const control = (session) => ({
+        async executeTool(call) {
+          tools.push(call);
+          session.session.revision += 1;
+          return { call_id: call.id, status: "completed", output: { ok: true }, state_revision: session.session.revision };
+        },
+        async refreshState() { return session; },
+        async syncSurface() { return session; },
+        async resolveConfirmation() { throw new Error("No confirmation expected."); },
+        async completeUiCommand() { return session; },
+        async finish() { return session; },
+        async recordMessage(message) {
+          messages.push(message);
+          return { ...message, id: `message_${messages.length}`, session_id: session.session.id, seq: messages.length, occurred_at: new Date().toISOString() };
+        },
+        async recordUsage(record) {
+          usage.push(record);
+          return { ...record, id: `usage_${usage.length}`, session_id: session.session.id, seq: usage.length, pricing: {}, amount: "0.00000000", currency: "USD", status: "estimated", occurred_at: new Date().toISOString() };
+        },
+        async fetchAudit() { return {}; },
+      });
+      const fetchBootstrap = async (url) => {
+        const id = String(url).includes("gemini") ? "gemini" : "xai";
+        const connection = id === "gemini"
+          ? {
+              transport: "websocket", endpoint: "wss://provider.test/gemini", access_token: "ephemeral",
+              model: "gemini-3.8-live", setup: { model: "models/gemini-3.8-live", responseModalities: ["AUDIO"] },
+              tool_name_map: { runtime_state_get: "runtime.state.get" }, history: [],
+            }
+          : {
+              transport: "websocket", endpoint: "wss://provider.test/xai", client_secret: "ephemeral",
+              model: "grok-voice-latest", session: { voice: "eve", tools: [] },
+              tool_name_map: { runtime_state_get: "runtime.state.get" }, history: [],
+            };
+        return new Response(JSON.stringify({ session_id: `${id}_session`, provider: id, connection, state: state(`${id}_session`) }), { headers: { "Content-Type": "application/json" } });
+      };
+
+      const geminiState = state("gemini_session");
+      const gemini = new GeminiLiveDriver(fetchBootstrap, () => new SimulatedSocket("gemini"), new SimulatedAudio());
+      const geminiClient = new RealtimeAgentClient(new SurfaceRegistry(), gemini, control(geminiState));
+      await geminiClient.connect({ session_id: "gemini_session", provider: "gemini", connection: { transport: "websocket", bootstrap_url: "/gemini" }, state: geminiState });
+      const geminiSocket = SimulatedSocket.all.at(-1);
+      geminiSocket.receive({
+        serverContent: { inputTranscription: { text: "Hello Gemini" }, outputTranscription: { text: "Gemini ready" } },
+        toolCall: { functionCalls: [{ id: "gemini_call", name: "runtime_state_get", args: {} }] },
+        usageMetadata: { promptTokensDetails: [{ modality: "AUDIO", tokenCount: 10 }], responseTokensDetails: [{ modality: "TEXT", tokenCount: 5 }] },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      document.body.dataset.gemini = "completed";
+
+      const xaiState = state("xai_session");
+      const xai = new XaiVoiceDriver(fetchBootstrap, () => new SimulatedSocket("xai"), new SimulatedAudio());
+      const xaiClient = new RealtimeAgentClient(new SurfaceRegistry(), xai, control(xaiState));
+      await xaiClient.connect({ session_id: "xai_session", provider: "xai", connection: { transport: "websocket", bootstrap_url: "/xai" }, state: xaiState });
+      const xaiSocket = SimulatedSocket.all.at(-1);
+      xaiSocket.receive({ type: "response.output_audio.delta", delta: btoa("\0".repeat(24_000)) });
+      xaiSocket.receive({ type: "response.output_audio_transcript.done", item_id: "xai_agent", transcript: "xAI ready" });
+      xaiSocket.receive({ type: "conversation.item.input_audio_transcription.completed", item_id: "xai_user", transcript: "Hello xAI" });
+      xaiSocket.receive({ type: "response.output_item.done", item: { type: "function_call", call_id: "xai_call", name: "runtime_state_get", arguments: "{}" } });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await xaiClient.disconnect();
+      document.body.dataset.xai = "completed";
+      document.querySelector("#messages").textContent = String(messages.length);
+      document.querySelector("#usage").textContent = String(usage.length);
+      document.querySelector("#tools").textContent = String(tools.length);
+    </script>
+  </body>
+</html>
